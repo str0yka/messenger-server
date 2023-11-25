@@ -1,9 +1,10 @@
 import bcrypt from 'bcrypt';
-import uuid from 'uuid';
+import { v4 as uuid } from 'uuid';
 
-import { prisma } from '../prisma';
-import { ApiError } from '../exceptions';
-import { UserDto } from '../dtos';
+import { UserDto } from '~/dtos';
+import { ApiError } from '~/exceptions';
+import { prisma } from '~/prisma';
+
 import { mailService } from './mail-service';
 import { tokenService } from './token-service';
 
@@ -16,7 +17,7 @@ class UserService {
     }
 
     const hashPassword = await bcrypt.hash(password, 3);
-    const verifyLink = uuid.v4();
+    const verifyLink = uuid();
 
     const user = await prisma.user.create({ data: { email, password: hashPassword, verifyLink } });
     await mailService.sendVerifyMail(user.email, `${process.env.API_URL}/api/verify/${verifyLink}`);
