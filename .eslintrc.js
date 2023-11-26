@@ -22,7 +22,7 @@ module.exports = {
           },
           {
             pattern: '../**',
-            group: 'index',
+            group: 'sibling',
           },
           {
             pattern: './**',

@@ -1,6 +1,12 @@
-import { ApiError } from '~/exceptions';
+import { ApiError } from '../exceptions/index.js';
 
-export const errorMiddleware = (err: unknown, req: Ex.Request, res: Ex.Response) => {
+export const errorMiddleware = (
+  err: unknown,
+  req: Ex.Request,
+  res: Ex.Response,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  next: Ex.NextFunction,
+) => {
   if (err instanceof ApiError) {
     return res.status(err.status).json({ message: err.message, errors: err.errors });
   }

@@ -1,13 +1,13 @@
 import jwt from 'jsonwebtoken';
 
-import { prisma } from '../prisma';
+import { prisma } from '../prisma/index.js';
 
 class TokenService {
   generateTokens(payload: Record<string, unknown>) {
     const accessToken = jwt.sign(payload, process.env.JWT_ACCESS_SECRET as string, {
       expiresIn: '30m',
     });
-    const refreshToken = jwt.sign(payload, process.env.JWT_ACCESS_SECRET as string, {
+    const refreshToken = jwt.sign(payload, process.env.JWT_REFRESH_SECRET as string, {
       expiresIn: '30d',
     });
 
@@ -22,6 +22,23 @@ class TokenService {
     }
 
     return prisma.token.create({ data: { userId, refreshToken } });
+  }
+
+  validateRefreshToken(refreshToken: Token['refreshToken']) {
+    try {
+      const userData = jwt.verify(refreshToken, process.env.JWT_REFRESH_SECRET as string);
+      return userData as UserDto;
+    } catch (e) {
+      return null;
+    }
+  }
+
+  async removeToken(refreshToken: Token['refreshToken']) {
+    return prisma.token.deleteMany({ where: { refreshToken } });
+  }
+
+  async findToken(refreshToken: Token['refreshToken']) {
+    return prisma.token.findFirst({ where: { refreshToken } });
   }
 }
 

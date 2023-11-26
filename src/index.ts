@@ -3,8 +3,8 @@ import cookieParser from 'cookie-parser';
 import cors from 'cors';
 import express from 'express';
 
-import { errorMiddleware } from '~/middlewares';
-import { router } from '~/router';
+import { errorMiddleware } from './middlewares/index.js';
+import { router } from './router/index.js';
 
 const app = express();
 const PORT = process.env.PORT;

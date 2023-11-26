@@ -17,15 +17,15 @@ class MailService {
     });
   }
 
-  async sendVerifyMail(to: string, link: string) {
+  async sendVerificationCode(to: string, code: number) {
     return this.transporter.sendMail({
       from: process.env.SMPT_USER,
       to,
-      subject: 'Confirmation code to log in to messenger',
+      subject: 'Verification code to log in to messenger',
       text: '',
       html: `
         <div>
-          <a href="${link}">V E R I F Y</a>
+          Your code is <b>${code}</b>
         </div>
       `,
     });
