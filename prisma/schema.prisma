@@ -8,17 +8,42 @@ datasource db {
 }
 
 model User {
-  id Int @id @default(autoincrement())
-  email String @unique
-  password String
-  isVerified Boolean @default(false)
-  verificationCode Int?
-  token Token? 
+  id           Int           @id @default(autoincrement())
+  email        String        @unique
+  password     String
+  verification Verification?
+  isVerified   Boolean       @default(false)
+  token        Token?
+  dialogs      Dialog[]
+  messages     Message[]
+}
+
+model Verification {
+  id               Int     @id @default(autoincrement())
+  verificationCode String?
+  user             User    @relation(fields: [userId], references: [id])
+  userId           Int     @unique
 }
 
 model Token {
-  id Int @id @default(autoincrement())
-  user User @relation(fields: [userId], references: [id])
-  userId Int @unique
+  id           Int    @id @default(autoincrement())
+  user         User   @relation(fields: [userId], references: [id])
+  userId       Int    @unique
   refreshToken String @db.Text
+}
+
+model Dialog {
+  id       Int       @id @default(autoincrement())
+  users    User[]
+  messages Message[]
+}
+
+model Message {
+  id        Int      @id @default(autoincrement())
+  message   String
+  user      User     @relation(fields: [userId], references: [id])
+  userId    Int     
+  dialog    Dialog   @relation(fields: [dialogId], references: [id])
+  dialogId  Int
+  createdAt DateTime @default(now())
 }

@@ -1,4 +1,4 @@
-import { userService } from '../services/index.js';
+import { userService, verificationService } from '../services/index.js';
 
 class UserController {
   async registration(req: Ex.Request, res: Ex.Response<{ user: UserDto }>, next: Ex.NextFunction) {
@@ -6,6 +6,11 @@ class UserController {
       const { email, password } = req.body;
 
       const userData = await userService.registration(email, password);
+
+      res.cookie('refreshToken', userData.refreshToken, {
+        maxAge: 1000 * 60 * 60 * 24 * 30, // 30 days
+        httpOnly: true,
+      });
 
       return res.json(userData);
     } catch (e) {
@@ -43,7 +48,7 @@ class UserController {
       const userId = Number(req.params.id);
       const { verificationCode } = req.body;
 
-      const userData = await userService.verify(userId, verificationCode);
+      const userData = await verificationService.verify(userId, verificationCode);
 
       res.cookie('refreshToken', userData.refreshToken, {
         maxAge: 1000 * 60 * 60 * 24 * 30, // 30 days
@@ -60,11 +65,11 @@ class UserController {
     try {
       const { refreshToken } = req.cookies;
 
-      const token = await userService.logout(refreshToken);
+      await userService.logout(refreshToken);
 
       res.clearCookie('refreshToken');
 
-      return res.json(token);
+      return res.status(204).json({});
     } catch (e) {
       next(e);
     }
@@ -86,6 +91,18 @@ class UserController {
       });
 
       return res.json(userData);
+    } catch (e) {
+      next(e);
+    }
+  }
+
+  async search(req: Ex.Request, res: Ex.Response, next: Ex.NextFunction) {
+    try {
+      const { query, limit, page } = req.query;
+
+      const users = await userService.search({ query, limit, page });
+
+      return res.json(users);
     } catch (e) {
       next(e);
     }

@@ -33,6 +33,15 @@ class TokenService {
     }
   }
 
+  validateAccessToken(refreshToken: string) {
+    try {
+      const userData = jwt.verify(refreshToken, process.env.JWT_ACCESS_SECRET as string);
+      return userData as UserDto;
+    } catch (e) {
+      return null;
+    }
+  }
+
   async removeToken(refreshToken: Token['refreshToken']) {
     return prisma.token.deleteMany({ where: { refreshToken } });
   }

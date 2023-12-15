@@ -6,17 +6,9 @@ import { prisma } from '../prisma/index.js';
 
 import { mailService } from './mail-service.js';
 import { tokenService } from './token-service.js';
+import { verificationService } from './verification-service.js';
 
 class UserService {
-  generateVerificationCode() {
-    return Number(
-      Array(4)
-        .fill(null)
-        .map(() => Math.floor(Math.random() * 10))
-        .join(''),
-    );
-  }
-
   async registration(email: string, password: string) {
     const candidate = await prisma.user.findUnique({ where: { email } });
 
@@ -25,45 +17,23 @@ class UserService {
     }
 
     const hashPassword = await bcrypt.hash(password, 3);
-    const verificationCode = this.generateVerificationCode();
 
     let user: User;
     if (candidate) {
       user = await prisma.user.update({
         where: { email },
-        data: { email, password: hashPassword, verificationCode },
+        data: { email, password: hashPassword },
       });
     } else {
       user = await prisma.user.create({
-        data: { email, password: hashPassword, verificationCode },
+        data: { email, password: hashPassword },
       });
     }
+
+    const verificationCode = verificationService.generateVerificationCode();
+    await verificationService.saveVerificationCode(user.id, verificationCode);
+
     await mailService.sendVerificationCode(user.email, verificationCode);
-
-    const userDto = UserDto(user);
-
-    return { user: userDto };
-  }
-
-  async verify(id: User['id'], verificationCode: number) {
-    const candidate = await prisma.user.findUnique({ where: { id } });
-
-    if (!candidate) {
-      throw ApiError.BadRequest('User isn`t exist');
-    }
-
-    if (candidate.isVerified) {
-      throw ApiError.BadRequest('User with this email already verified');
-    }
-
-    if (candidate.verificationCode !== verificationCode) {
-      throw ApiError.BadRequest('The verification code is incorrect');
-    }
-
-    const user = await prisma.user.update({
-      where: { id },
-      data: { isVerified: true, verificationCode: null },
-    });
 
     const userDto = UserDto(user);
     const tokens = tokenService.generateTokens(userDto);
@@ -97,7 +67,7 @@ class UserService {
       throw ApiError.UnauthorizedError();
     }
 
-    return tokenService.removeToken(refreshToken);
+    await tokenService.removeToken(refreshToken);
   }
 
   async refresh(refreshToken: Token['refreshToken']) {
@@ -123,6 +93,44 @@ class UserService {
     await tokenService.saveToken(userFromDb.id, tokens.refreshToken);
 
     return { user: userDto, ...tokens };
+  }
+
+  async search(queries: Ex.Request['query']) {
+    const query = queries.query;
+    let limit = queries.limit ?? 50;
+    let page = queries.page ?? 1;
+
+    if (!query) {
+      throw ApiError.BadRequest('The query must contain search parameters');
+    }
+
+    if (typeof query !== 'string') {
+      throw ApiError.BadRequest('Incorrect query type');
+    }
+
+    if (Array.isArray(limit) || isNaN(Number(limit))) {
+      throw ApiError.BadRequest('Incorrect limit type');
+    }
+
+    if (Array.isArray(page) || isNaN(Number(page))) {
+      throw ApiError.BadRequest('Incorrect page type');
+    }
+
+    limit = Number(limit);
+    page = Number(page);
+
+    return prisma.user.findMany({
+      take: limit,
+      skip: (page - 1) * limit,
+      where: {
+        email: { contains: query },
+        isVerified: true,
+      },
+      select: {
+        id: true,
+        email: true,
+      },
+    });
   }
 }
 

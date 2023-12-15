@@ -17,7 +17,7 @@ class MailService {
     });
   }
 
-  async sendVerificationCode(to: string, code: number) {
+  async sendVerificationCode(to: string, code: string) {
     return this.transporter.sendMail({
       from: process.env.SMPT_USER,
       to,
