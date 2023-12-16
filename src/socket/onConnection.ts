@@ -9,11 +9,11 @@ export const onConnection = async (io: IO.Server, socket: IO.Socket) => {
     return; // $FIXME
   }
 
-  socket.userId = id;
+  socket.userId = Number(id);
   socket.email = email;
   socket.isVerified = isVerified;
 
-  socket.join(id);
+  socket.join(`user-${id}`);
 
   const dialogs = await dialogService.getAll(Number(id));
 

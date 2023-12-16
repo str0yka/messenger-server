@@ -8,42 +8,76 @@ datasource db {
 }
 
 model User {
-  id           Int           @id @default(autoincrement())
-  email        String        @unique
-  password     String
-  verification Verification?
-  isVerified   Boolean       @default(false)
-  token        Token?
-  dialogs      Dialog[]
-  messages     Message[]
+  id                 Int           @id @default(autoincrement())
+  email              String        @unique
+  password           String
+  verification       Verification?
+  isVerified         Boolean       @default(false)
+  token              Token?
+  messages           Message[]
+  userInDialogs      Dialog[]      @relation("UserInDialogs")
+  partnerInDialogs   Dialog[]      @relation("PartnerInDialogs")
+  firstUserInChats   Chat[]        @relation("FirstUserInChats")
+  secondsUserInChats Chat[]        @relation("SecondsUserInChats")
+  updatedAt          DateTime      @updatedAt
+  createdAt          DateTime      @default(now())
 }
 
 model Verification {
-  id               Int     @id @default(autoincrement())
+  id               Int      @id @default(autoincrement())
   verificationCode String?
-  user             User    @relation(fields: [userId], references: [id])
-  userId           Int     @unique
+  user             User     @relation(fields: [userId], references: [id])
+  userId           Int      @unique
+  updatedAt        DateTime @updatedAt
+  createdAt        DateTime @default(now())
 }
 
 model Token {
-  id           Int    @id @default(autoincrement())
-  user         User   @relation(fields: [userId], references: [id])
-  userId       Int    @unique
-  refreshToken String @db.Text
+  id           Int      @id @default(autoincrement())
+  user         User     @relation(fields: [userId], references: [id])
+  userId       Int      @unique
+  refreshToken String   @db.Text
+  updatedAt    DateTime @updatedAt
+  createdAt    DateTime @default(now())
 }
 
 model Dialog {
-  id       Int       @id @default(autoincrement())
-  users    User[]
-  messages Message[]
+  id                     Int       @id @default(autoincrement())
+  title                  String
+  user                   User      @relation("UserInDialogs", fields: [userId], references: [id])
+  userId                 Int
+  partner                User      @relation("PartnerInDialogs", fields: [partnerId], references: [id])
+  partnerId              Int
+  messages               Message[]
+  lastMessage            Message?  @relation("LastMessage", fields: [lastMessageId], references: [id])
+  lastMessageId          Int?
+  firstUserDialogInChat  Chat?     @relation("FirstUserDialog")
+  secondUserDialogInChat Chat?     @relation("SecondUserDialog")
+  updatedAt              DateTime  @updatedAt
+  createdAt              DateTime  @default(now())
+}
+
+model Chat {
+  id                 Int      @id @default(autoincrement())
+  firstUser          User     @relation("FirstUserInChats", fields: [firstUserId], references: [id])
+  firstUserId        Int
+  secondsUser        User     @relation("SecondsUserInChats", fields: [secondsUserId], references: [id])
+  secondsUserId      Int
+  firstUserDialog    Dialog   @relation("FirstUserDialog", fields: [firstUserDialogId], references: [id])
+  firstUserDialogId  Int      @unique
+  secondUserDialog   Dialog   @relation("SecondUserDialog", fields: [secondUserDialogId], references: [id])
+  secondUserDialogId Int      @unique
+  updatedAt          DateTime @updatedAt
+  createdAt          DateTime @default(now())
 }
 
 model Message {
-  id        Int      @id @default(autoincrement())
-  message   String
-  user      User     @relation(fields: [userId], references: [id])
-  userId    Int     
-  dialog    Dialog   @relation(fields: [dialogId], references: [id])
-  dialogId  Int
-  createdAt DateTime @default(now())
+  id            Int      @id @default(autoincrement())
+  message       String
+  dialogs       Dialog[]
+  lastMessageIn Dialog[] @relation("LastMessage")
+  user          User     @relation(fields: [userId], references: [id])
+  userId        Int
+  updatedAt     DateTime @updatedAt
+  createdAt     DateTime @default(now())
 }

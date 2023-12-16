@@ -1,67 +1,87 @@
-import { ApiError } from '../exceptions/index.js';
 import { prisma } from '../prisma/index.js';
 
 class MessageService {
-  async send(message: string, fromId: User['id'], toId: User['id']) {
-    let dialogData = await prisma.dialog.findFirst({
-      where: {
-        AND: [
-          {
-            users: {
-              some: {
-                id: fromId,
-              },
-            },
-          },
-          {
-            users: {
-              some: {
-                id: toId,
-              },
-            },
-          },
-        ],
+  async send({
+    userId,
+    chatId,
+    message,
+  }: {
+    userId: User['id'];
+    chatId: Chat['id'];
+    message: Message['message'];
+  }) {
+    const messageData = await prisma.message.create({
+      data: {
+        message,
+        userId,
       },
     });
 
-    if (!dialogData) {
-      dialogData = await prisma.dialog.create({
-        data: {
-          users: {
-            connect: [
-              {
-                id: fromId,
-              },
-              {
-                id: toId,
-              },
-            ],
-          },
-        },
-      });
-    }
-
-    if (!dialogData) {
-      throw ApiError.BadRequest('Error when creating dialog');
-    }
-
-    return prisma.dialog.update({
+    const { firstUserDialog, secondUserDialog } = await prisma.chat.update({
       where: {
-        id: dialogData.id,
+        id: chatId,
       },
       data: {
-        messages: {
-          create: {
-            message,
-            userId: fromId,
+        firstUserDialog: {
+          update: {
+            lastMessageId: messageData.id,
+            messages: {
+              connect: {
+                id: messageData.id,
+              },
+            },
+          },
+        },
+        secondUserDialog: {
+          update: {
+            lastMessageId: messageData.id,
+            messages: {
+              connect: {
+                id: messageData.id,
+              },
+            },
           },
         },
       },
-      include: {
-        messages: true,
-        users: true,
+      select: {
+        firstUserDialog: {
+          include: {
+            partner: {
+              select: {
+                id: true,
+                email: true,
+                isVerified: true,
+              },
+            },
+            lastMessage: true,
+            messages: true,
+            firstUserDialogInChat: true,
+            secondUserDialogInChat: true,
+          },
+        },
+        secondUserDialog: {
+          include: {
+            partner: {
+              select: {
+                id: true,
+                email: true,
+                isVerified: true,
+              },
+            },
+            lastMessage: true,
+            messages: true,
+            firstUserDialogInChat: true,
+            secondUserDialogInChat: true,
+          },
+        },
       },
     });
+
+    const userDialogData = firstUserDialog?.id === userId ? firstUserDialog : secondUserDialog;
+    const partnerDialogData =
+      userDialogData?.id === firstUserDialog?.id ? secondUserDialog : firstUserDialog;
+
+    return { userDialogData, partnerDialogData, messageData };
   }
 }
 

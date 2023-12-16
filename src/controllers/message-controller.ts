@@ -3,14 +3,12 @@ import { messageService } from '../services/index.js';
 export class MessageController {
   async send(req: Ex.Request, res: Ex.Response, next: Ex.NextFunction) {
     try {
-      const { message, toId } = req.body;
-      const fromId = req.user.id;
+      const { message, dialogId } = req.body;
 
-      const dialogData = await messageService.send(message, fromId, toId);
+      const dialogData = await messageService.send(message, dialogId);
 
       return res.json(dialogData);
     } catch (e) {
-      console.log(e);
       next(e);
     }
   }
