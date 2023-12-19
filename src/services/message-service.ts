@@ -1,4 +1,4 @@
-import { prisma } from '../prisma/index.js';
+import { prisma } from '../prisma';
 
 class MessageService {
   async send({
@@ -10,78 +10,52 @@ class MessageService {
     chatId: Chat['id'];
     message: Message['message'];
   }) {
-    const messageData = await prisma.message.create({
-      data: {
-        message,
-        userId,
-      },
-    });
-
-    const { firstUserDialog, secondUserDialog } = await prisma.chat.update({
+    const dialogIds = await prisma.chat.update({
       where: {
         id: chatId,
       },
       data: {
-        firstUserDialog: {
-          update: {
-            lastMessageId: messageData.id,
-            messages: {
-              connect: {
-                id: messageData.id,
-              },
+        dialogs: {
+          updateMany: {
+            where: {
+              chatId,
             },
-          },
-        },
-        secondUserDialog: {
-          update: {
-            lastMessageId: messageData.id,
-            messages: {
-              connect: {
-                id: messageData.id,
-              },
+            data: {
+              lastMessageId: null,
             },
           },
         },
       },
       select: {
-        firstUserDialog: {
-          include: {
-            partner: {
-              select: {
-                id: true,
-                email: true,
-                isVerified: true,
-              },
-            },
-            lastMessage: true,
-            messages: true,
-            firstUserDialogInChat: true,
-            secondUserDialogInChat: true,
-          },
-        },
-        secondUserDialog: {
-          include: {
-            partner: {
-              select: {
-                id: true,
-                email: true,
-                isVerified: true,
-              },
-            },
-            lastMessage: true,
-            messages: true,
-            firstUserDialogInChat: true,
-            secondUserDialogInChat: true,
+        dialogs: {
+          select: {
+            id: true,
           },
         },
       },
     });
 
-    const userDialogData = firstUserDialog?.id === userId ? firstUserDialog : secondUserDialog;
-    const partnerDialogData =
-      userDialogData?.id === firstUserDialog?.id ? secondUserDialog : firstUserDialog;
+    const messageData = await prisma.message.create({
+      data: {
+        message,
+        userId,
+        dialogs: {
+          connect: dialogIds.dialogs.map((dialog) => ({
+            id: dialog.id,
+          })),
+        },
+        lastMessageIn: {
+          connect: dialogIds.dialogs.map((dialog) => ({
+            id: dialog.id,
+          })),
+        },
+      },
+      include: {
+        dialogs: true,
+      },
+    });
 
-    return { userDialogData, partnerDialogData, messageData };
+    return messageData;
   }
 }
 

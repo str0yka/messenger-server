@@ -42,6 +42,7 @@ CREATE TABLE `Dialog` (
     `userId` INTEGER NOT NULL,
     `partnerId` INTEGER NOT NULL,
     `lastMessageId` INTEGER NULL,
+    `chatId` INTEGER NOT NULL,
     `updatedAt` DATETIME(3) NOT NULL,
     `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
 
@@ -99,16 +100,7 @@ ALTER TABLE `Dialog` ADD CONSTRAINT `Dialog_partnerId_fkey` FOREIGN KEY (`partne
 ALTER TABLE `Dialog` ADD CONSTRAINT `Dialog_lastMessageId_fkey` FOREIGN KEY (`lastMessageId`) REFERENCES `Message`(`id`) ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE `Chat` ADD CONSTRAINT `Chat_firstUserId_fkey` FOREIGN KEY (`firstUserId`) REFERENCES `User`(`id`) ON DELETE RESTRICT ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE `Chat` ADD CONSTRAINT `Chat_secondsUserId_fkey` FOREIGN KEY (`secondsUserId`) REFERENCES `User`(`id`) ON DELETE RESTRICT ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE `Chat` ADD CONSTRAINT `Chat_firstUserDialogId_fkey` FOREIGN KEY (`firstUserDialogId`) REFERENCES `Dialog`(`id`) ON DELETE RESTRICT ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE `Chat` ADD CONSTRAINT `Chat_secondUserDialogId_fkey` FOREIGN KEY (`secondUserDialogId`) REFERENCES `Dialog`(`id`) ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE `Dialog` ADD CONSTRAINT `Dialog_chatId_fkey` FOREIGN KEY (`chatId`) REFERENCES `Chat`(`id`) ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE `Message` ADD CONSTRAINT `Message_userId_fkey` FOREIGN KEY (`userId`) REFERENCES `User`(`id`) ON DELETE RESTRICT ON UPDATE CASCADE;

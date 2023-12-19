@@ -1,1 +1,2 @@
-export * from './messageHandler.js';
+export * from './messageHandler';
+export * from './dialogHandler';

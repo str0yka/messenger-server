@@ -1,4 +1,4 @@
-import { userService, verificationService } from '../services/index.js';
+import { userService, verificationService } from '../services';
 
 class UserController {
   async registration(req: Ex.Request, res: Ex.Response<{ user: UserDto }>, next: Ex.NextFunction) {

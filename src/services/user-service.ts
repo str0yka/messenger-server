@@ -1,12 +1,12 @@
 import bcrypt from 'bcrypt';
 
-import { UserDto } from '../dtos/index.js';
-import { ApiError } from '../exceptions/index.js';
-import { prisma } from '../prisma/index.js';
+import { UserDto } from '../dtos';
+import { ApiError } from '../exceptions';
+import { prisma } from '../prisma';
 
-import { mailService } from './mail-service.js';
-import { tokenService } from './token-service.js';
-import { verificationService } from './verification-service.js';
+import { mailService } from './mail-service';
+import { tokenService } from './token-service';
+import { verificationService } from './verification-service';
 
 class UserService {
   async registration(email: string, password: string) {

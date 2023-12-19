@@ -1,4 +1,4 @@
-import { prisma } from '../prisma/index.js';
+import { prisma } from '../prisma';
 
 class DialogService {
   async get(dialogId: Dialog['id']) {
@@ -20,8 +20,6 @@ class DialogService {
           },
         },
         messages: true,
-        firstUserDialogInChat: true,
-        secondUserDialogInChat: true,
       },
     });
   }
@@ -55,97 +53,41 @@ class DialogService {
     { userId, userEmail }: { userId: User['id']; userEmail: User['email'] },
     { partnerId, partnerEmail }: { partnerId: User['id']; partnerEmail: User['email'] },
   ) {
-    const userDialogData = await prisma.dialog.create({
-      data: {
-        title: partnerEmail,
-        userId,
-        partnerId,
-      },
-      include: {
-        user: {
-          select: {
-            id: true,
-            email: true,
-            isVerified: true,
-          },
-        },
-        partner: {
-          select: {
-            id: true,
-            email: true,
-            isVerified: true,
-          },
-        },
-        lastMessage: true,
-        firstUserDialogInChat: true,
-        secondUserDialogInChat: true,
-      },
-    });
-
-    const partnerDialogData = await prisma.dialog.create({
-      data: {
-        title: userEmail,
-        userId: partnerId,
-        partnerId: userId,
-      },
-      include: {
-        user: {
-          select: {
-            id: true,
-            email: true,
-            isVerified: true,
-          },
-        },
-        partner: {
-          select: {
-            id: true,
-            email: true,
-            isVerified: true,
-          },
-        },
-        lastMessage: true,
-        firstUserDialogInChat: true,
-        secondUserDialogInChat: true,
-      },
-    });
-
     const chatData = await prisma.chat.create({
       data: {
-        firstUserId: userId,
-        secondsUserId: partnerId,
-        firstUserDialogId: userDialogData.id,
-        secondUserDialogId: partnerDialogData.id,
+        users: {
+          connect: [
+            {
+              id: userId,
+            },
+            {
+              id: partnerId,
+            },
+          ],
+        },
+        dialogs: {
+          createMany: {
+            data: [
+              {
+                title: partnerEmail,
+                userId,
+                partnerId,
+              },
+              {
+                title: userEmail,
+                userId: partnerId,
+                partnerId: userId,
+              },
+            ],
+          },
+        },
       },
       include: {
-        firstUser: {
-          select: {
-            id: true,
-            email: true,
-            isVerified: true,
-          },
-        },
-        secondsUser: {
-          select: {
-            id: true,
-            email: true,
-            isVerified: true,
-          },
-        },
+        dialogs: true,
       },
     });
 
-    return {
-      userDialogData: {
-        ...userDialogData,
-        firstUserDialogInChat: chatData,
-        secondUserDialogInChat: chatData,
-      },
-      partnerDialogData: {
-        ...partnerDialogData,
-        firstUserDialogInChat: chatData,
-        secondUserDialogInChat: chatData,
-      },
-    };
+    return chatData;
   }
 }
 

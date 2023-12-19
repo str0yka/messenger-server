@@ -1,23 +1,28 @@
-import { dialogService } from '../services/dialog-service.js';
-
-import { messageHandler } from './handlers/index.js';
+import { messageHandler, dialogHandler } from './handlers';
 
 export const onConnection = async (io: IO.Server, socket: IO.Socket) => {
   const { id, email, isVerified } = socket.handshake.query;
 
-  if (!id || !email || !isVerified) {
+  if (
+    !id ||
+    !email ||
+    !isVerified ||
+    isVerified !== 'true' ||
+    Array.isArray(id) ||
+    Array.isArray(email) ||
+    Array.isArray(isVerified)
+  ) {
     return; // $FIXME
   }
 
-  socket.userId = Number(id);
-  socket.email = email;
-  socket.isVerified = isVerified;
+  socket.data.id = Number(id);
+  socket.data.email = email;
+  socket.data.isVerified = true;
 
   socket.join(`user-${id}`);
 
-  const dialogs = await dialogService.getAll(Number(id));
-
-  socket.emit('dialogs:put', dialogs);
+  socket.emit('dialogs:updateRequired');
 
   messageHandler(io, socket);
+  dialogHandler(io, socket);
 };

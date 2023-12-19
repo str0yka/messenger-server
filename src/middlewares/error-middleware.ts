@@ -1,4 +1,4 @@
-import { ApiError } from '../exceptions/index.js';
+import { ApiError } from '../exceptions/index';
 
 export const errorMiddleware = (
   err: unknown,

@@ -1,6 +1,6 @@
 import jwt from 'jsonwebtoken';
 
-import { prisma } from '../prisma/index.js';
+import { prisma } from '../prisma';
 
 class TokenService {
   generateTokens(payload: Record<string, unknown>) {

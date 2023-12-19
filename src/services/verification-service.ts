@@ -1,8 +1,8 @@
-import { UserDto } from '../dtos/index.js';
-import { ApiError } from '../exceptions/api-error.js';
-import { prisma } from '../prisma/index.js';
+import { UserDto } from '../dtos';
+import { ApiError } from '../exceptions';
+import { prisma } from '../prisma';
 
-import { tokenService } from './token-service.js';
+import { tokenService } from './token-service';
 
 class VerificationService {
   generateVerificationCode(): NonNullable<Verification['verificationCode']> {

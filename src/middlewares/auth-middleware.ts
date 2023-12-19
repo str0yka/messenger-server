@@ -1,5 +1,5 @@
-import { ApiError } from '../exceptions/index.js';
-import { tokenService } from '../services/index.js';
+import { ApiError } from '../exceptions';
+import { tokenService } from '../services';
 
 export const authMiddlware = (req: Ex.Request, res: Ex.Response, next: Ex.NextFunction) => {
   try {

@@ -1,7 +1,7 @@
 import { Router } from 'express';
 
-import { messageController, userController, dialogController } from '../controllers/index.js';
-import { authMiddlware } from '../middlewares/index.js';
+import { userController } from '../controllers';
+import { authMiddlware } from '../middlewares';
 
 export const router = Router();
 
@@ -11,5 +11,3 @@ router.post('/login', userController.login);
 router.post('/logout', userController.logout);
 router.get('/refresh', userController.refresh);
 router.get('/search', authMiddlware, userController.search);
-router.post('/send', authMiddlware, messageController.send);
-router.get('/dialogs', authMiddlware, dialogController.getAll);
