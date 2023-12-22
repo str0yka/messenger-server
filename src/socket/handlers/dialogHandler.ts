@@ -3,18 +3,12 @@ import { dialogService } from '../../services';
 export const dialogHandler = (io: IO.Server, socket: IO.Socket) => {
   const { id: userId, email: userEmail } = socket.data;
 
-  socket.on('dialog:join', async (dialogId) => {
-    const dialogData = await dialogService.get(dialogId);
+  socket.on('dialog:join', async (partnerId) => {
+    const dialogData = await dialogService.getByPartnerId(userId, partnerId);
 
-    socket.join(`dialog-${dialogId}`);
+    socket.join(`chat-${dialogData.chatId}`);
 
     socket.emit('dialog:put', dialogData);
-  });
-
-  socket.on('dialog:leave', (dialogId) => {
-    socket.leave(`dialog-${dialogId}`);
-
-    socket.emit('dialog:put', null);
   });
 
   socket.on('dialogs:create', async (partnerId, partnerEmail) => {
@@ -29,7 +23,7 @@ export const dialogHandler = (io: IO.Server, socket: IO.Socket) => {
       },
     );
 
-    io.to(dialogs.map((dialog) => `user-${dialog.userId}`)).emit('dialogs:updateRequired'); // $FIXME (dialog:update)
+    io.to(dialogs.map((dialog) => `user-${dialog.userId}`)).emit('dialogs:updateRequired');
   });
 
   socket.on('dialogs:get', async () => {

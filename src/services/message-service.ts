@@ -10,7 +10,7 @@ class MessageService {
     chatId: Chat['id'];
     message: Message['message'];
   }) {
-    const dialogIds = await prisma.chat.update({
+    const chatData = await prisma.chat.update({
       where: {
         id: chatId,
       },
@@ -27,6 +27,7 @@ class MessageService {
         },
       },
       select: {
+        id: true,
         dialogs: {
           select: {
             id: true,
@@ -40,12 +41,12 @@ class MessageService {
         message,
         userId,
         dialogs: {
-          connect: dialogIds.dialogs.map((dialog) => ({
+          connect: chatData.dialogs.map((dialog) => ({
             id: dialog.id,
           })),
         },
         lastMessageIn: {
-          connect: dialogIds.dialogs.map((dialog) => ({
+          connect: chatData.dialogs.map((dialog) => ({
             id: dialog.id,
           })),
         },

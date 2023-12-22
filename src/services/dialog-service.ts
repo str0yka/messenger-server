@@ -1,6 +1,29 @@
 import { prisma } from '../prisma';
 
 class DialogService {
+  async getByPartnerId(userId: User['id'], partnerId: User['id']) {
+    return prisma.dialog.findFirstOrThrow({
+      where: { userId, partnerId },
+      include: {
+        user: {
+          select: {
+            id: true,
+            email: true,
+            isVerified: true,
+          },
+        },
+        partner: {
+          select: {
+            id: true,
+            email: true,
+            isVerified: true,
+          },
+        },
+        messages: true,
+      },
+    });
+  }
+
   async get(dialogId: Dialog['id']) {
     return prisma.dialog.findUniqueOrThrow({
       where: { id: dialogId },

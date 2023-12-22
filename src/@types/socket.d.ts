@@ -10,8 +10,7 @@ interface ServerToClientEvents {
 }
 
 interface ClientToServerEvents {
-  'dialog:join': (dialogId: number) => void;
-  'dialog:leave': (dialogId: number) => void;
+  'dialog:join': (partnerId: number) => void;
   'dialogs:create': (partnerId: number, partnerEmail: string) => void;
   'dialogs:get': () => void;
   'messages:add': (chatId: number, message: string) => void;
