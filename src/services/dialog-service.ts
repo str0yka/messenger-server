@@ -1,32 +1,10 @@
+import { ApiError } from '../exceptions';
 import { prisma } from '../prisma';
 
 class DialogService {
-  async getByPartnerId(userId: User['id'], partnerId: User['id']) {
+  async get(userId: User['id'], partnerId: User['id']) {
     return prisma.dialog.findFirstOrThrow({
       where: { userId, partnerId },
-      include: {
-        user: {
-          select: {
-            id: true,
-            email: true,
-            isVerified: true,
-          },
-        },
-        partner: {
-          select: {
-            id: true,
-            email: true,
-            isVerified: true,
-          },
-        },
-        messages: true,
-      },
-    });
-  }
-
-  async get(dialogId: Dialog['id']) {
-    return prisma.dialog.findUniqueOrThrow({
-      where: { id: dialogId },
       include: {
         user: {
           select: {
@@ -51,6 +29,7 @@ class DialogService {
     return prisma.dialog.findMany({
       where: {
         userId,
+        lastMessageId: { not: null },
       },
       include: {
         user: {
@@ -72,11 +51,31 @@ class DialogService {
     });
   }
 
-  async create(
-    { userId, userEmail }: { userId: User['id']; userEmail: User['email'] },
-    { partnerId, partnerEmail }: { partnerId: User['id']; partnerEmail: User['email'] },
-  ) {
-    const chatData = await prisma.chat.create({
+  async create({
+    userId,
+    userEmail,
+    partnerId,
+  }: {
+    userId: User['id'];
+    userEmail: User['email'];
+    partnerId: User['id'];
+  }) {
+    const partnerData = await prisma.user.findUnique({
+      where: {
+        id: partnerId,
+      },
+      select: {
+        id: true,
+        email: true,
+        isVerified: true,
+      },
+    });
+
+    if (!partnerData) {
+      throw ApiError.BadRequest(`User isn't exist`);
+    }
+
+    await prisma.chat.create({
       data: {
         users: {
           connect: [
@@ -92,7 +91,7 @@ class DialogService {
           createMany: {
             data: [
               {
-                title: partnerEmail,
+                title: partnerData.email,
                 userId,
                 partnerId,
               },
@@ -110,7 +109,49 @@ class DialogService {
       },
     });
 
-    return chatData;
+    return this.get(userId, partnerId);
+  }
+
+  async search(
+    { query, limit = 50, page = 1 }: Record<string, string | number | undefined>,
+    userId: User['id'],
+  ) {
+    if (!query) {
+      return [];
+    }
+
+    if (typeof query !== 'string') {
+      throw ApiError.BadRequest('Incorrect query type');
+    }
+
+    limit = Number(limit);
+    page = Number(page);
+
+    return prisma.dialog.findMany({
+      where: {
+        userId,
+        title: { contains: query },
+      },
+      take: limit,
+      skip: (page - 1) * limit,
+      include: {
+        user: {
+          select: {
+            id: true,
+            email: true,
+            isVerified: true,
+          },
+        },
+        partner: {
+          select: {
+            id: true,
+            email: true,
+            isVerified: true,
+          },
+        },
+        lastMessage: true,
+      },
+    });
   }
 }
 

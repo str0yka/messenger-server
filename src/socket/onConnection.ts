@@ -21,8 +21,6 @@ export const onConnection = async (io: IO.Server, socket: IO.Socket) => {
 
   socket.join(`user-${id}`);
 
-  socket.emit('dialogs:updateRequired');
-
   messageHandler(io, socket);
   dialogHandler(io, socket);
 };

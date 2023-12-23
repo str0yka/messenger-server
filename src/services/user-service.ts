@@ -95,25 +95,16 @@ class UserService {
     return { user: userDto, ...tokens };
   }
 
-  async search(queries: Ex.Request['query']) {
-    const query = queries.query;
-    let limit = queries.limit ?? 50;
-    let page = queries.page ?? 1;
-
+  async search(
+    { query, limit = 50, page = 1 }: Record<string, string | number | undefined>,
+    userId?: User['id'],
+  ) {
     if (!query) {
-      throw ApiError.BadRequest('The query must contain search parameters');
+      return [];
     }
 
     if (typeof query !== 'string') {
       throw ApiError.BadRequest('Incorrect query type');
-    }
-
-    if (Array.isArray(limit) || isNaN(Number(limit))) {
-      throw ApiError.BadRequest('Incorrect limit type');
-    }
-
-    if (Array.isArray(page) || isNaN(Number(page))) {
-      throw ApiError.BadRequest('Incorrect page type');
     }
 
     limit = Number(limit);
@@ -125,6 +116,18 @@ class UserService {
       where: {
         email: { contains: query },
         isVerified: true,
+        ...(userId && {
+          id: {
+            not: userId,
+          },
+          NOT: {
+            partnerInDialogs: {
+              some: {
+                userId,
+              },
+            },
+          },
+        }),
       },
       select: {
         id: true,

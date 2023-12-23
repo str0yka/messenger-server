@@ -95,18 +95,6 @@ class UserController {
       next(e);
     }
   }
-
-  async search(req: Ex.Request, res: Ex.Response, next: Ex.NextFunction) {
-    try {
-      const { query, limit, page } = req.query;
-
-      const users = await userService.search({ query, limit, page });
-
-      return res.json(users);
-    } catch (e) {
-      next(e);
-    }
-  }
 }
 
 export const userController = new UserController();
