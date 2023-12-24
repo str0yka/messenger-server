@@ -47,6 +47,18 @@ class DialogService {
           },
         },
         lastMessage: true,
+        _count: {
+          select: {
+            messages: {
+              where: {
+                read: false,
+                userId: {
+                  not: userId,
+                },
+              },
+            },
+          },
+        },
       },
     });
   }
@@ -150,6 +162,18 @@ class DialogService {
           },
         },
         lastMessage: true,
+        _count: {
+          select: {
+            messages: {
+              where: {
+                read: false,
+                userId: {
+                  not: userId,
+                },
+              },
+            },
+          },
+        },
       },
     });
   }

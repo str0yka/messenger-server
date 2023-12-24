@@ -69,6 +69,7 @@ model Chat {
 model Message {
   id            Int      @id @default(autoincrement())
   message       String
+  read          Boolean  @default(false)
   dialogs       Dialog[]
   lastMessageIn Dialog[] @relation("LastMessage")
   user          User     @relation(fields: [userId], references: [id])

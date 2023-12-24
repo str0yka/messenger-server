@@ -58,6 +58,22 @@ class MessageService {
 
     return messageData;
   }
+
+  async read(messageId: Message['id']) {
+    const messageData = await prisma.message.update({
+      where: {
+        id: messageId,
+      },
+      data: {
+        read: true,
+      },
+      include: {
+        dialogs: true,
+      },
+    });
+
+    return messageData;
+  }
 }
 
 export const messageService = new MessageService();
