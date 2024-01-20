@@ -10,21 +10,9 @@ class MessageService {
     chatId: Chat['id'];
     message: Message['message'];
   }) {
-    const chatData = await prisma.chat.update({
+    const chatData = await prisma.chat.findUniqueOrThrow({
       where: {
         id: chatId,
-      },
-      data: {
-        dialogs: {
-          updateMany: {
-            where: {
-              chatId,
-            },
-            data: {
-              lastMessageId: null,
-            },
-          },
-        },
       },
       select: {
         id: true,
@@ -45,16 +33,47 @@ class MessageService {
             id: dialog.id,
           })),
         },
-        lastMessageIn: {
-          connect: chatData.dialogs.map((dialog) => ({
-            id: dialog.id,
-          })),
-        },
       },
       include: {
         dialogs: true,
       },
     });
+
+    return messageData;
+  }
+
+  async delete(
+    messageId: Message['id'],
+    dialogId: Dialog['id'],
+    deleteForEveryone: boolean = false,
+  ) {
+    let messageData;
+    if (deleteForEveryone) {
+      messageData = await prisma.message.delete({
+        where: {
+          id: messageId,
+        },
+        include: {
+          dialogs: true,
+        },
+      });
+    } else {
+      messageData = await prisma.message.update({
+        where: {
+          id: messageId,
+        },
+        data: {
+          dialogs: {
+            disconnect: {
+              id: dialogId,
+            },
+          },
+        },
+        include: {
+          dialogs: true,
+        },
+      });
+    }
 
     return messageData;
   }

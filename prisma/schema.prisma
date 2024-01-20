@@ -48,8 +48,6 @@ model Dialog {
   partner       User      @relation("PartnerInDialogs", fields: [partnerId], references: [id])
   partnerId     Int
   messages      Message[]
-  lastMessage   Message?  @relation("LastMessage", fields: [lastMessageId], references: [id])
-  lastMessageId Int?
   chat          Chat      @relation(fields: [chatId], references: [id])
   chatId        Int
   updatedAt     DateTime  @updatedAt
@@ -68,10 +66,9 @@ model Chat {
 
 model Message {
   id            Int      @id @default(autoincrement())
-  message       String
+  message       String   @db.Text
   read          Boolean  @default(false)
   dialogs       Dialog[]
-  lastMessageIn Dialog[] @relation("LastMessage")
   user          User     @relation(fields: [userId], references: [id])
   userId        Int
   updatedAt     DateTime @updatedAt

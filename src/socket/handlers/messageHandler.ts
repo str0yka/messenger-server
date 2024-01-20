@@ -22,4 +22,20 @@ export const messageHandler = (io: IO.Server, socket: IO.Socket) => {
     io.to(`chat-${chatId}`).emit('messages:add', messageData);
     io.to(dialogs.map((dialog) => `user-${dialog.userId}`)).emit('dialogs:updateRequired');
   });
+
+  socket.on('message:delete', async (messageId, dialogId, deleteForEveryone = false) => {
+    const { dialogs, ...messageData } = await messageService.delete(
+      messageId,
+      dialogId,
+      deleteForEveryone,
+    );
+
+    const chatId = dialogs[0].chatId;
+
+    io.to(`chat-${chatId}`).emit('message:delete', messageData);
+    io.to(`user-${userId}`).emit('dialogs:updateRequired');
+    io.to(
+      dialogs.filter((dialog) => dialog.userId !== userId).map((dialog) => `user-${dialog.userId}`),
+    ).emit('dialogs:updateRequired');
+  });
 };

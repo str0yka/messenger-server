@@ -26,10 +26,10 @@ class DialogService {
   }
 
   async getAll(userId: User['id']) {
-    return prisma.dialog.findMany({
+    const dialogsData = await prisma.dialog.findMany({
       where: {
         userId,
-        lastMessageId: { not: null },
+        // take dialogs where dialog started
       },
       include: {
         user: {
@@ -46,7 +46,12 @@ class DialogService {
             isVerified: true,
           },
         },
-        lastMessage: true,
+        messages: {
+          orderBy: {
+            createdAt: 'desc',
+          },
+          take: 1,
+        },
         _count: {
           select: {
             messages: {
@@ -60,6 +65,12 @@ class DialogService {
           },
         },
       },
+    });
+
+    return dialogsData.map((dialog) => {
+      const { messages, ...dialogData } = dialog;
+
+      return { ...dialogData, lastMessage: messages[0] };
     });
   }
 
@@ -139,7 +150,7 @@ class DialogService {
     limit = Number(limit);
     page = Number(page);
 
-    return prisma.dialog.findMany({
+    const searchData = await prisma.dialog.findMany({
       where: {
         userId,
         title: { contains: query },
@@ -161,7 +172,12 @@ class DialogService {
             isVerified: true,
           },
         },
-        lastMessage: true,
+        messages: {
+          orderBy: {
+            createdAt: 'desc',
+          },
+          take: 1,
+        },
         _count: {
           select: {
             messages: {
@@ -175,6 +191,12 @@ class DialogService {
           },
         },
       },
+    });
+
+    return searchData.map((dialog) => {
+      const { messages, ...dialogData } = dialog;
+
+      return { ...dialogData, lastMessage: messages[0] };
     });
   }
 }
