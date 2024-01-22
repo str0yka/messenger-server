@@ -20,7 +20,6 @@ class DialogService {
             isVerified: true,
           },
         },
-        messages: true,
       },
     });
   }
@@ -29,7 +28,7 @@ class DialogService {
     const dialogsData = await prisma.dialog.findMany({
       where: {
         userId,
-        // take dialogs where dialog started
+        // take dialogs where dialog started (have 1 or more messages)
       },
       include: {
         user: {

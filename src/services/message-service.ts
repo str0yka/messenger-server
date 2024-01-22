@@ -93,6 +93,42 @@ class MessageService {
 
     return messageData;
   }
+
+  async get(
+    dialogId: Dialog['id'],
+    sort?: {
+      orderBy?: {
+        createdAt?: 'desc' | 'asc';
+      };
+      take?: number;
+      where?: {
+        id?: {
+          lt?: Message['id'];
+          lte?: Message['id'];
+          gt?: Message['id'];
+          gte?: Message['id'];
+        };
+        createdAt?: {
+          lt?: Message['createdAt'];
+          lte?: Message['createdAt'];
+          gt?: Message['createdAt'];
+          gte?: Message['createdAt'];
+        };
+      };
+    },
+  ) {
+    const { messages } = await prisma.dialog.findUniqueOrThrow({
+      where: {
+        id: dialogId,
+      },
+      select: {
+        messages: true,
+        ...(sort && { messages: sort }),
+      },
+    });
+
+    return messages;
+  }
 }
 
 export const messageService = new MessageService();

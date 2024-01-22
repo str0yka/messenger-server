@@ -12,14 +12,14 @@ export const messageHandler = (io: IO.Server, socket: IO.Socket) => {
     io.to(dialogs.map((dialog) => `user-${dialog.userId}`)).emit('dialogs:updateRequired');
   });
 
-  socket.on('messages:add', async (chatId, message) => {
+  socket.on('message:add', async (chatId, message) => {
     const { dialogs, ...messageData } = await messageService.send({
       message,
       chatId,
       userId,
     });
 
-    io.to(`chat-${chatId}`).emit('messages:add', messageData);
+    io.to(`chat-${chatId}`).emit('message:add', messageData);
     io.to(dialogs.map((dialog) => `user-${dialog.userId}`)).emit('dialogs:updateRequired');
   });
 
@@ -37,5 +37,11 @@ export const messageHandler = (io: IO.Server, socket: IO.Socket) => {
     io.to(
       dialogs.filter((dialog) => dialog.userId !== userId).map((dialog) => `user-${dialog.userId}`),
     ).emit('dialogs:updateRequired');
+  });
+
+  socket.on('messages:get', async (dialogId, sort) => {
+    const messages = await messageService.get(dialogId, sort);
+
+    io.to(`user-${userId}`).emit('messages:patch', messages);
   });
 };
