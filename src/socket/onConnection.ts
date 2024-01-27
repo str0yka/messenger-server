@@ -15,9 +15,11 @@ export const onConnection = async (io: IO.Server, socket: IO.Socket) => {
     return; // $FIXME
   }
 
-  socket.data.id = Number(id);
-  socket.data.email = email;
-  socket.data.isVerified = true;
+  socket.data.user = {
+    id: Number(id),
+    email: email,
+    isVerified: true,
+  };
 
   socket.join(`user-${id}`);
 

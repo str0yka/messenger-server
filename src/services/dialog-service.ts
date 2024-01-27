@@ -2,9 +2,13 @@ import { ApiError } from '../exceptions';
 import { prisma } from '../prisma';
 
 class DialogService {
-  async get(userId: User['id'], partnerId: User['id']) {
-    return prisma.dialog.findFirstOrThrow({
-      where: { userId, partnerId },
+  async get(
+    params:
+      | { userId: User['id']; partnerId: User['id'] }
+      | { id: Dialog['id']; userId: User['id'] },
+  ) {
+    const dialogData = await prisma.dialog.findFirstOrThrow({
+      where: params,
       include: {
         user: {
           select: {
@@ -20,8 +24,27 @@ class DialogService {
             isVerified: true,
           },
         },
+        _count: {
+          select: {
+            messages: {
+              where: {
+                read: false,
+                userId: {
+                  not: params.userId,
+                },
+              },
+            },
+          },
+        },
       },
     });
+
+    const {
+      _count: { messages: unreadedMessagesCount },
+      ...otherDialogData
+    } = dialogData;
+
+    return { ...otherDialogData, unreadedMessagesCount };
   }
 
   async getAll(userId: User['id']) {
@@ -67,9 +90,13 @@ class DialogService {
     });
 
     return dialogsData.map((dialog) => {
-      const { messages, ...dialogData } = dialog;
+      const {
+        messages,
+        _count: { messages: unreadedMessagesCount },
+        ...dialogData
+      } = dialog;
 
-      return { ...dialogData, lastMessage: messages[0] };
+      return { ...dialogData, lastMessage: messages[0], unreadedMessagesCount };
     });
   }
 
@@ -131,7 +158,7 @@ class DialogService {
       },
     });
 
-    return this.get(userId, partnerId);
+    return this.get({ userId, partnerId });
   }
 
   async search(
