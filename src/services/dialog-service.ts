@@ -44,7 +44,7 @@ class DialogService {
       ...otherDialogData
     } = dialogData;
 
-    return { ...otherDialogData, unreadedMessagesCount };
+    return { dialog: otherDialogData, unreadedMessagesCount };
   }
 
   async getAll(userId: User['id']) {
@@ -89,14 +89,14 @@ class DialogService {
       },
     });
 
-    return dialogsData.map((dialog) => {
+    return dialogsData.map((dialogData) => {
       const {
         messages,
         _count: { messages: unreadedMessagesCount },
-        ...dialogData
-      } = dialog;
+        ...dialog
+      } = dialogData;
 
-      return { ...dialogData, lastMessage: messages[0], unreadedMessagesCount };
+      return { dialog, lastMessage: messages[0], unreadedMessagesCount };
     });
   }
 

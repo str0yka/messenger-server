@@ -1,23 +1,49 @@
+import { prisma } from '../../prisma';
 import { messageService } from '../../services';
 
 export const messageHandler = (io: IO.Server, socket: IO.Socket) => {
-  socket.on('messages:read', async ({ lastReadMessageId }) => {
+  socket.on('CLIENT:MESSAGE_READ', async ({ readMessage }) => {
     if (!socket.data.dialog) return;
 
-    await messageService.read({
-      lastReadMessageId,
-      userId: socket.data.user.id,
-      chatId: socket.data.dialog.chatId,
+    const messageData = await prisma.message.update({
+      where: {
+        id: readMessage.id,
+      },
+      data: {
+        read: true,
+      },
     });
 
-    io.to(`chat-${socket.data.dialog.chatId}`).emit('messages:read', lastReadMessageId);
-    io.to(`chat-${socket.data.dialog.chatId}`).emit('dialog:updateRequired');
-    io.to([`user-${socket.data.dialog.userId}`, `user-${socket.data.dialog.partnerId}`]).emit(
-      'dialogs:updateRequired',
-    );
+    const {
+      _count: { messages: unreadedMessagesCount },
+    } = await prisma.dialog.findUniqueOrThrow({
+      where: {
+        id: socket.data.dialog.id,
+      },
+      select: {
+        _count: {
+          select: {
+            messages: {
+              where: {
+                id: {
+                  not: socket.data.user.id,
+                },
+                read: false,
+              },
+            },
+          },
+        },
+      },
+    });
+
+    socket.emit('SERVER:MESSAGE_READ_RESPONSE', { unreadedMessagesCount });
+    io.to(`chat-${socket.data.dialog.chatId}`).emit('SERVER:MESSAGE_READ', {
+      readMessage: messageData,
+    });
+    io.to(`chat-${socket.data.dialog.chatId}`).emit('SERVER:DIALOGS_NEED_TO_UPDATE');
   });
 
-  socket.on('message:add', async (message) => {
+  socket.on('CLIENT:MESSAGE_ADD', async (message) => {
     if (!socket.data.dialog) return;
 
     const { dialogs, ...messageData } = await messageService.send({
@@ -29,12 +55,12 @@ export const messageHandler = (io: IO.Server, socket: IO.Socket) => {
       chatId: socket.data.dialog.chatId,
     });
 
-    io.to(`chat-${socket.data.dialog.chatId}`).emit('message:add', messageData);
-    io.to(`chat-${socket.data.dialog.chatId}`).emit('dialog:updateRequired');
-    io.to(dialogs.map((dialog) => `user-${dialog.userId}`)).emit('dialogs:updateRequired');
+    io.to(`chat-${socket.data.dialog.chatId}`).emit('SERVER:MESSAGE_ADD', messageData);
+    io.to(`chat-${socket.data.dialog.chatId}`).emit('SERVER:DIALOG_NEED_TO_UPDATE');
+    io.to(dialogs.map((dialog) => `user-${dialog.userId}`)).emit('SERVER:DIALOGS_NEED_TO_UPDATE');
   });
 
-  socket.on('message:delete', async ({ messageId, deleteForEveryone = false }) => {
+  socket.on('CLIENT:MESSAGE_DELETE', async ({ messageId, deleteForEveryone = false }) => {
     if (!socket.data.dialog) return;
 
     const { dialogs, ...messageData } = await messageService.delete(
@@ -43,24 +69,19 @@ export const messageHandler = (io: IO.Server, socket: IO.Socket) => {
       deleteForEveryone,
     );
 
-    io.to(`chat-${socket.data.dialog.id}`).emit('message:delete', messageData);
-    io.to(`user-${socket.data.user.id}`).emit('dialogs:updateRequired');
-    io.to(
-      dialogs
-        .filter((dialog) => dialog.userId !== socket.data.user.id)
-        .map((dialog) => `user-${dialog.userId}`),
-    ).emit('dialogs:updateRequired');
+    io.to(`chat-${socket.data.dialog.id}`).emit('SERVER:MESSAGE_DELETE', messageData);
+    io.to(dialogs.map((dialog) => `user-${dialog.userId}`)).emit('SERVER:DIALOGS_NEED_TO_UPDATE');
   });
 
-  socket.on('messages:get', async ({ filter, method = 'patch' }) => {
+  socket.on('CLIENT:MESSAGES_GET', async ({ filter, method = 'patch' }) => {
     if (!socket.data.dialog) return;
 
     const messages = await messageService.get(socket.data.dialog.id, filter);
 
     if (method === 'patch') {
-      return io.to(`user-${socket.data.user.id}`).emit('messages:patch', messages);
+      return io.to(`user-${socket.data.user.id}`).emit('SERVER:MESSAGES_PATCH', messages);
     }
 
-    io.to(`user-${socket.data.user.id}`).emit('messages:put', messages);
+    io.to(`user-${socket.data.user.id}`).emit('SERVER:MESSAGES_PUT', messages);
   });
 };

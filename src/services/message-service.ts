@@ -117,6 +117,7 @@ class MessageService {
       };
       take?: number;
       where?: {
+        read?: boolean;
         id?: {
           lt?: number;
           lte?: number;
