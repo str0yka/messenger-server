@@ -116,58 +116,69 @@ class MessageService {
         createdAt?: 'desc' | 'asc';
       };
       take?: number;
-      where?: {
-        read?: boolean;
-        id?: {
-          lt?: number;
-          lte?: number;
-          gt?: number;
-          gte?: number;
-        };
-        createdAt?: {
-          lt?: number;
-          lte?: number;
-          gt?: number;
-          gte?: number;
-        };
+      cursor?: {
+        id: number;
       };
+      skip?: number;
     },
   ) {
-    const convertTimestampToDate = (value?: number) => {
-      if (typeof value === 'number') {
-        return new Date(value);
-      }
-
-      return value;
-    };
-
-    const convertObjTimestampToDate = (obj?: Record<string, undefined | number>) => {
-      if (!obj) return obj;
-
-      return Object.fromEntries(
-        Object.entries(obj).map(([key, value]) => [key, convertTimestampToDate(value)]),
-      );
-    };
-
     const { messages } = await prisma.dialog.findUniqueOrThrow({
       where: {
         id: dialogId,
       },
       select: {
         messages: true,
-        ...(filter && {
-          messages: {
-            ...filter,
-            where: {
-              ...filter.where,
-              createdAt: convertObjTimestampToDate(filter.where?.createdAt),
-            },
-          },
-        }),
+        ...(filter && { messages: filter }),
       },
     });
 
     return messages;
+  }
+
+  async getByDate(dialogId: Dialog['id'], timestamp: number, take: number) {
+    const date = new Date(timestamp);
+
+    const { messages: afterMessages } = await prisma.dialog.findUniqueOrThrow({
+      where: {
+        id: dialogId,
+      },
+      select: {
+        messages: {
+          where: {
+            createdAt: {
+              gte: date,
+            },
+          },
+          take: take / 2,
+          orderBy: {
+            createdAt: 'asc',
+          },
+        },
+      },
+    });
+
+    const { messages: beforeMessages } = await prisma.dialog.findUniqueOrThrow({
+      where: {
+        id: dialogId,
+      },
+      select: {
+        messages: {
+          where: {
+            createdAt: {
+              lt: date,
+            },
+          },
+          take: take / 2,
+          orderBy: {
+            createdAt: 'desc',
+          },
+        },
+      },
+    });
+
+    const firstFoundMessage = afterMessages.at(0) ?? beforeMessages.at(0)!;
+
+    return { firstFoundMessage, messages: [...afterMessages.reverse(), ...beforeMessages] };
   }
 }
 

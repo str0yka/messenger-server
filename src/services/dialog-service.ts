@@ -36,15 +36,22 @@ class DialogService {
             },
           },
         },
+        messages: {
+          orderBy: {
+            createdAt: 'desc',
+          },
+          take: 1,
+        },
       },
     });
 
     const {
+      messages,
       _count: { messages: unreadedMessagesCount },
       ...otherDialogData
     } = dialogData;
 
-    return { dialog: otherDialogData, unreadedMessagesCount };
+    return { dialog: otherDialogData, lastMessage: messages.at(0), unreadedMessagesCount };
   }
 
   async getAll(userId: User['id']) {

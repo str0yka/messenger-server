@@ -15,12 +15,13 @@ export const dialogHandler = (io: IO.Server, socket: IO.Socket) => {
       });
     }
 
-    const { dialog, unreadedMessagesCount } = dialogData;
+    const { dialog, lastMessage, unreadedMessagesCount } = dialogData;
 
     const firstUnreadMessageData = await prisma.message.findFirst({
       where: {
         dialogs: {
-          every: {
+          some: {
+            id: dialog.id,
             chatId: dialog.chatId,
           },
         },
@@ -36,7 +37,8 @@ export const dialogHandler = (io: IO.Server, socket: IO.Socket) => {
       messagesData = await prisma.message.findMany({
         where: {
           dialogs: {
-            every: {
+            some: {
+              id: dialog.id,
               chatId: dialog.chatId,
             },
           },
@@ -54,7 +56,8 @@ export const dialogHandler = (io: IO.Server, socket: IO.Socket) => {
         const otherMessagesData = await prisma.message.findMany({
           where: {
             dialogs: {
-              every: {
+              some: {
+                id: dialog.id,
                 chatId: dialog.chatId,
               },
             },
@@ -75,7 +78,8 @@ export const dialogHandler = (io: IO.Server, socket: IO.Socket) => {
       messagesData = await prisma.message.findMany({
         where: {
           dialogs: {
-            every: {
+            some: {
+              id: dialog.id,
               chatId: dialog.chatId,
             },
           },
@@ -87,41 +91,32 @@ export const dialogHandler = (io: IO.Server, socket: IO.Socket) => {
       });
     }
 
+    if (socket.data.dialog) {
+      socket.leave(`chat-${socket.data.dialog.chatId}`);
+    }
+
     socket.data.dialog = dialog;
     socket.join(`chat-${dialog.chatId}`);
-    socket.emit('SERVER:GET_DIALOG_RESPONSE', {
+    socket.emit('SERVER:DIALOG_JOIN_RESPONSE', {
       dialog,
       unreadedMessagesCount,
       messages: messagesData,
+      lastMessage,
     });
   });
 
   socket.on('CLIENT:DIALOG_GET', async () => {
     if (!socket.data.dialog) return;
 
-    const dialogData = await prisma.dialog.findUniqueOrThrow({
-      where: {
-        id: socket.data.dialog.id,
-      },
-      include: {
-        user: {
-          select: {
-            id: true,
-            email: true,
-            isVerified: true,
-          },
-        },
-        partner: {
-          select: {
-            id: true,
-            email: true,
-            isVerified: true,
-          },
-        },
-      },
-    });
+    const dialogData = await dialogService
+      .get({ id: socket.data.dialog.id, userId: socket.data.user.id })
+      .catch(() => null);
 
-    socket.emit('SERVER:DIALOG_PUT', { dialog: dialogData });
+    if (!dialogData) {
+      throw new Error(); // $FIXME
+    }
+
+    socket.emit('SERVER:DIALOG_GET_RESPONSE', dialogData);
   });
 
   socket.on('CLIENT:DIALOGS_GET', async () => {
