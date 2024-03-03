@@ -1,39 +1,13 @@
-import { prisma } from '../../prisma';
 import { messageService } from '../../services';
 
 export const messageHandler = (io: IO.Server, socket: IO.Socket) => {
   socket.on('CLIENT:MESSAGE_READ', async ({ readMessage }) => {
     if (!socket.data.dialog) return;
 
-    const messageData = await prisma.message.update({
-      where: {
-        id: readMessage.id,
-      },
-      data: {
-        read: true,
-      },
-    });
-
-    const {
-      _count: { messages: unreadedMessagesCount },
-    } = await prisma.dialog.findUniqueOrThrow({
-      where: {
-        id: socket.data.dialog.id,
-      },
-      select: {
-        _count: {
-          select: {
-            messages: {
-              where: {
-                id: {
-                  not: socket.data.user.id,
-                },
-                read: false,
-              },
-            },
-          },
-        },
-      },
+    const { messageData, unreadedMessagesCount } = await messageService.read({
+      message: readMessage,
+      dialogId: socket.data.dialog.id,
+      userId: socket.data.user.id,
     });
 
     socket.emit('SERVER:MESSAGE_READ_RESPONSE', { unreadedMessagesCount });
@@ -83,7 +57,7 @@ export const messageHandler = (io: IO.Server, socket: IO.Socket) => {
   socket.on('CLIENT:MESSAGES_GET', async ({ filter, method = 'PATCH' }) => {
     if (!socket.data.dialog) return;
 
-    const messages = await messageService.get(socket.data.dialog.id, filter);
+    const messages = await messageService.get({ dialogId: socket.data.dialog.id, filter });
 
     io.to(`user-${socket.data.user.id}`).emit(`SERVER:MESSAGES_${method}`, messages);
   });

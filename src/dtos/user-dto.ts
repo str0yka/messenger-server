@@ -1,5 +1,2 @@
-export const UserDto = (user: User): UserDto => ({
-  id: user.id,
-  email: user.email,
-  isVerified: user.isVerified,
-});
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+export const UserDto = ({ password, ...user }: User): UserDto => user;

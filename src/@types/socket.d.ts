@@ -26,16 +26,16 @@ interface ServerToClientEvents {
   'SERVER:DIALOG_NEED_TO_UPDATE': () => void;
   'SERVER:MESSAGE_ADD': (message: Message) => void;
   'SERVER:MESSAGE_DELETE': (message: Message) => void;
-  'SERVER:MESSAGES_PUT': (messages: Message[]) => void;
   'SERVER:JUMP_TO_DATE_RESPONSE': (params: {
     messages: Message[];
     firstFoundMessage: Message;
   }) => void;
+  'SERVER:MESSAGES_PUT': (messages: Message[]) => void;
   'SERVER:MESSAGES_PATCH': (messages: Message[]) => void;
 }
 
 interface ClientToServerEvents {
-  'CLIENT:DIALOG_JOIN': (params: { partnerId: number }) => void;
+  'CLIENT:DIALOG_JOIN': (params: { partnerId: number; messagesLimit?: number }) => void;
   'CLIENT:DIALOG_GET': () => void;
   'CLIENT:DIALOGS_GET': () => void;
   'CLIENT:MESSAGE_READ': (params: { readMessage: Message }) => void;
@@ -60,7 +60,7 @@ interface ClientToServerEvents {
 interface InterServerEvents {}
 
 type SocketData = {
-  user: UserDto;
+  user: Pick<User, 'email' | 'id' | 'isVerified'>;
   dialog?: Dialog & { user: UserDto; partner: UserDto };
 };
 

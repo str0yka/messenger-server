@@ -95,6 +95,20 @@ class UserController {
       next(e);
     }
   }
+
+  async update(req: Ex.Request, res: Ex.Response<{ user: UserDto }>, next: Ex.NextFunction) {
+    try {
+      const user = req.user!;
+
+      const updateFields = req.body;
+
+      const userData = await userService.update({ id: user.id, ...updateFields });
+
+      return res.json({ user: userData });
+    } catch (e) {
+      next(e);
+    }
+  }
 }
 
 export const userController = new UserController();

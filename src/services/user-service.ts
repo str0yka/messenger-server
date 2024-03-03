@@ -136,6 +136,17 @@ class UserService {
       },
     });
   }
+
+  async update({
+    id,
+    ...updateFields
+  }: Partial<Pick<User, 'bio' | 'lastname' | 'name' | 'username'>> & {
+    id: User['id'];
+  }) {
+    const userData = await prisma.user.update({ where: { id }, data: updateFields });
+
+    return userData;
+  }
 }
 
 export const userService = new UserService();

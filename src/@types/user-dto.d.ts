@@ -1,1 +1,1 @@
-declare type UserDto = Pick<User, 'id' | 'email' | 'isVerified'>;
+declare type UserDto = Omit<User, 'password'>;

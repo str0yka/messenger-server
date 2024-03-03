@@ -9,6 +9,10 @@ datasource db {
 
 model User {
   id               Int           @id @default(autoincrement())
+  name             String?
+  lastname         String?
+  bio              String?
+  username         String?
   email            String        @unique
   password         String
   verification     Verification?
@@ -41,17 +45,17 @@ model Token {
 }
 
 model Dialog {
-  id            Int       @id @default(autoincrement())
-  title         String
-  user          User      @relation("UserInDialogs", fields: [userId], references: [id])
-  userId        Int
-  partner       User      @relation("PartnerInDialogs", fields: [partnerId], references: [id])
-  partnerId     Int
-  messages      Message[]
-  chat          Chat      @relation(fields: [chatId], references: [id])
-  chatId        Int
-  updatedAt     DateTime  @updatedAt
-  createdAt     DateTime  @default(now())
+  id        Int       @id @default(autoincrement())
+  title     String
+  user      User      @relation("UserInDialogs", fields: [userId], references: [id])
+  userId    Int
+  partner   User      @relation("PartnerInDialogs", fields: [partnerId], references: [id])
+  partnerId Int
+  messages  Message[]
+  chat      Chat      @relation(fields: [chatId], references: [id])
+  chatId    Int
+  updatedAt DateTime  @updatedAt
+  createdAt DateTime  @default(now())
 
   @@unique([userId, partnerId])
 }
@@ -65,12 +69,12 @@ model Chat {
 }
 
 model Message {
-  id            Int      @id @default(autoincrement())
-  message       String   @db.Text
-  read          Boolean  @default(false)
-  dialogs       Dialog[]
-  user          User     @relation(fields: [userId], references: [id])
-  userId        Int
-  updatedAt     DateTime @updatedAt
-  createdAt     DateTime @default(now())
+  id        Int      @id @default(autoincrement())
+  message   String   @db.Text
+  read      Boolean  @default(false)
+  dialogs   Dialog[]
+  user      User     @relation(fields: [userId], references: [id])
+  userId    Int
+  updatedAt DateTime @updatedAt
+  createdAt DateTime @default(now())
 }

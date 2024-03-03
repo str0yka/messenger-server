@@ -79,38 +79,53 @@ class MessageService {
   }
 
   async read({
-    chatId,
+    message,
+    dialogId,
     userId,
-    lastReadMessageId,
   }: {
-    lastReadMessageId: Message['id'];
-    chatId: Chat['id'];
-    userId: User['id'];
+    message: Message;
+    dialogId: Dialog['id'];
+    userId: UserDto['id'];
   }) {
-    const messageData = await prisma.message.updateMany({
+    const messageData = await prisma.message.update({
       where: {
-        id: {
-          lte: lastReadMessageId,
-        },
-        dialogs: {
-          every: {
-            chatId,
-          },
-        },
-        userId: {
-          not: userId,
-        },
+        id: message.id,
       },
       data: {
         read: true,
       },
     });
 
-    return messageData;
+    const {
+      _count: { messages: unreadedMessagesCount },
+    } = await prisma.dialog.findUniqueOrThrow({
+      where: {
+        id: dialogId,
+      },
+      select: {
+        _count: {
+          select: {
+            messages: {
+              where: {
+                id: {
+                  not: userId,
+                },
+                read: false,
+              },
+            },
+          },
+        },
+      },
+    });
+
+    return { messageData, unreadedMessagesCount };
   }
 
-  async get(
-    dialogId: Dialog['id'],
+  async get({
+    dialogId,
+    filter,
+  }: {
+    dialogId: Dialog['id'];
     filter?: {
       orderBy?: {
         createdAt?: 'desc' | 'asc';
@@ -120,8 +135,8 @@ class MessageService {
         id: number;
       };
       skip?: number;
-    },
-  ) {
+    };
+  }) {
     const { messages } = await prisma.dialog.findUniqueOrThrow({
       where: {
         id: dialogId,
@@ -179,6 +194,30 @@ class MessageService {
     const firstFoundMessage = afterMessages.at(0) ?? beforeMessages.at(0)!;
 
     return { firstFoundMessage, messages: [...afterMessages.reverse(), ...beforeMessages] };
+  }
+
+  async findFirstUnreadMessage({
+    userId,
+    dialogId,
+  }: {
+    userId: User['id'];
+    dialogId: Dialog['id'];
+  }) {
+    const firstUnreadMessageData = await prisma.message.findFirst({
+      where: {
+        dialogs: {
+          some: {
+            id: dialogId,
+          },
+        },
+        read: false,
+        userId: {
+          not: userId,
+        },
+      },
+    });
+
+    return firstUnreadMessageData;
   }
 }
 

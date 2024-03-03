@@ -1,6 +1,8 @@
 import { ApiError } from '../exceptions';
 import { prisma } from '../prisma';
 
+import { messageService } from './message-service';
+
 class DialogService {
   async get(
     params:
@@ -15,6 +17,12 @@ class DialogService {
             id: true,
             email: true,
             isVerified: true,
+            bio: true,
+            createdAt: true,
+            lastname: true,
+            name: true,
+            updatedAt: true,
+            username: true,
           },
         },
         partner: {
@@ -22,6 +30,12 @@ class DialogService {
             id: true,
             email: true,
             isVerified: true,
+            bio: true,
+            createdAt: true,
+            lastname: true,
+            name: true,
+            updatedAt: true,
+            username: true,
           },
         },
         _count: {
@@ -66,6 +80,12 @@ class DialogService {
             id: true,
             email: true,
             isVerified: true,
+            bio: true,
+            createdAt: true,
+            lastname: true,
+            name: true,
+            updatedAt: true,
+            username: true,
           },
         },
         partner: {
@@ -73,6 +93,12 @@ class DialogService {
             id: true,
             email: true,
             isVerified: true,
+            bio: true,
+            createdAt: true,
+            lastname: true,
+            name: true,
+            updatedAt: true,
+            username: true,
           },
         },
         messages: {
@@ -124,6 +150,12 @@ class DialogService {
         id: true,
         email: true,
         isVerified: true,
+        bio: true,
+        createdAt: true,
+        lastname: true,
+        name: true,
+        updatedAt: true,
+        username: true,
       },
     });
 
@@ -196,6 +228,12 @@ class DialogService {
             id: true,
             email: true,
             isVerified: true,
+            bio: true,
+            createdAt: true,
+            lastname: true,
+            name: true,
+            updatedAt: true,
+            username: true,
           },
         },
         partner: {
@@ -203,6 +241,12 @@ class DialogService {
             id: true,
             email: true,
             isVerified: true,
+            bio: true,
+            createdAt: true,
+            lastname: true,
+            name: true,
+            updatedAt: true,
+            username: true,
           },
         },
         messages: {
@@ -231,6 +275,66 @@ class DialogService {
 
       return { ...dialogData, lastMessage: messages[0] };
     });
+  }
+
+  async join({
+    user,
+    partnerId,
+    messagesLimit = 40,
+  }: {
+    user: Pick<UserDto, 'id' | 'email'>;
+    partnerId: number;
+    messagesLimit?: number;
+  }) {
+    let dialogData = await dialogService.get({ userId: user.id, partnerId }).catch(() => null);
+
+    if (!dialogData) {
+      dialogData = await dialogService.create({
+        userId: user.id,
+        userEmail: user.email,
+        partnerId,
+      });
+    }
+
+    const { dialog, lastMessage, unreadedMessagesCount } = dialogData;
+
+    const firstUnreadMessageData = await messageService.findFirstUnreadMessage({
+      dialogId: dialog.id,
+      userId: user.id,
+    });
+
+    let messagesData;
+    if (firstUnreadMessageData) {
+      messagesData = await messageService.get({
+        dialogId: dialog.id,
+        filter: {
+          orderBy: { createdAt: 'desc' },
+          cursor: { id: firstUnreadMessageData.id },
+          take: -messagesLimit,
+        },
+      });
+
+      if (messagesData.length < messagesLimit) {
+        const otherMessagesData = await messageService.get({
+          dialogId: dialog.id,
+          filter: {
+            orderBy: { createdAt: 'desc' },
+            cursor: { id: firstUnreadMessageData.id },
+            take: messagesLimit - messagesData.length,
+            skip: 1,
+          },
+        });
+
+        messagesData = [...messagesData, ...otherMessagesData];
+      }
+    } else {
+      messagesData = await messageService.get({
+        dialogId: dialog.id,
+        filter: { orderBy: { createdAt: 'desc' }, take: messagesLimit },
+      });
+    }
+
+    return { dialog, lastMessage, unreadedMessagesCount, messages: messagesData };
   }
 }
 
