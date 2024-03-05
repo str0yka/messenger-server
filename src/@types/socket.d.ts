@@ -35,7 +35,10 @@ interface ServerToClientEvents {
 }
 
 interface ClientToServerEvents {
-  'CLIENT:DIALOG_JOIN': (params: { partnerId: number; messagesLimit?: number }) => void;
+  'CLIENT:DIALOG_JOIN': (params: {
+    partner: { id: number } | { username: string };
+    messagesLimit?: number;
+  }) => void;
   'CLIENT:DIALOG_GET': () => void;
   'CLIENT:DIALOGS_GET': () => void;
   'CLIENT:MESSAGE_READ': (params: { readMessage: Message }) => void;

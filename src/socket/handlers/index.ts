@@ -1,2 +1,2 @@
-export * from './messageHandler';
-export * from './dialogHandler';
+export * from './message-handler';
+export * from './dialog-handler';

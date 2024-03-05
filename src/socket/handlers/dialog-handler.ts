@@ -1,11 +1,11 @@
 import { dialogService } from '../../services';
 
 export const dialogHandler = (io: IO.Server, socket: IO.Socket) => {
-  socket.on('CLIENT:DIALOG_JOIN', async ({ partnerId, messagesLimit }) => {
+  socket.on('CLIENT:DIALOG_JOIN', async ({ partner, messagesLimit }) => {
     const { dialog, lastMessage, messages, unreadedMessagesCount } = await dialogService.join({
-      partnerId,
-      messagesLimit,
       user: socket.data.user,
+      partner,
+      messagesLimit,
     });
 
     if (socket.data.dialog) {

@@ -9,7 +9,7 @@ import { tokenService } from './token-service';
 import { verificationService } from './verification-service';
 
 class UserService {
-  async registration(email: string, password: string) {
+  async registration({ email, name, password }: { email: string; password: string; name: string }) {
     const candidate = await prisma.user.findUnique({ where: { email } });
 
     if (candidate?.isVerified) {
@@ -22,11 +22,11 @@ class UserService {
     if (candidate) {
       user = await prisma.user.update({
         where: { email },
-        data: { email, password: hashPassword },
+        data: { email, name, password: hashPassword },
       });
     } else {
       user = await prisma.user.create({
-        data: { email, password: hashPassword },
+        data: { email, name, password: hashPassword },
       });
     }
 
@@ -114,7 +114,7 @@ class UserService {
       take: limit,
       skip: (page - 1) * limit,
       where: {
-        email: { contains: query },
+        OR: [{ email: { contains: query } }, { username: { contains: query } }],
         isVerified: true,
         ...(userId && {
           id: {
@@ -133,6 +133,12 @@ class UserService {
         id: true,
         email: true,
         isVerified: true,
+        bio: true,
+        createdAt: true,
+        lastname: true,
+        name: true,
+        updatedAt: true,
+        username: true,
       },
     });
   }
@@ -143,9 +149,11 @@ class UserService {
   }: Partial<Pick<User, 'bio' | 'lastname' | 'name' | 'username'>> & {
     id: User['id'];
   }) {
-    const userData = await prisma.user.update({ where: { id }, data: updateFields });
+    return prisma.user.update({ where: { id }, data: updateFields });
+  }
 
-    return userData;
+  async get(params: { id: number } | { email: string } | { username: string }) {
+    return prisma.user.findUnique({ where: params });
   }
 }
 

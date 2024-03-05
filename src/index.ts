@@ -8,7 +8,7 @@ import { Server } from 'socket.io';
 
 import { errorMiddleware } from './middlewares';
 import { router } from './router';
-import { onConnection } from './socket/onConnection';
+import { onConnection } from './socket/on-connection';
 
 const PORT = process.env.PORT;
 

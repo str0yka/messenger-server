@@ -3,9 +3,9 @@ import { userService, verificationService } from '../services';
 class UserController {
   async registration(req: Ex.Request, res: Ex.Response<{ user: UserDto }>, next: Ex.NextFunction) {
     try {
-      const { email, password } = req.body;
+      const { email, name, password } = req.body;
 
-      const userData = await userService.registration(email, password);
+      const userData = await userService.registration({ email, name, password });
 
       res.cookie('refreshToken', userData.refreshToken, {
         maxAge: 1000 * 60 * 60 * 24 * 30, // 30 days

@@ -2,10 +2,12 @@ import { ApiError } from '../exceptions';
 import { prisma } from '../prisma';
 
 import { messageService } from './message-service';
+import { userService } from './user-service';
 
 class DialogService {
   async get(
     params:
+      | { userId: User['id']; partner: { id: User['id'] } | { username: User['username'] } }
       | { userId: User['id']; partnerId: User['id'] }
       | { id: Dialog['id']; userId: User['id'] },
   ) {
@@ -134,30 +136,13 @@ class DialogService {
   }
 
   async create({
-    userId,
-    userEmail,
-    partnerId,
+    user,
+    partner,
   }: {
-    userId: User['id'];
-    userEmail: User['email'];
-    partnerId: User['id'];
+    user: Pick<User, 'id' | 'email'>;
+    partner: { id: number } | { username: string };
   }) {
-    const partnerData = await prisma.user.findUnique({
-      where: {
-        id: partnerId,
-      },
-      select: {
-        id: true,
-        email: true,
-        isVerified: true,
-        bio: true,
-        createdAt: true,
-        lastname: true,
-        name: true,
-        updatedAt: true,
-        username: true,
-      },
-    });
+    const partnerData = await userService.get(partner);
 
     if (!partnerData) {
       throw ApiError.BadRequest(`User isn't exist`);
@@ -166,27 +151,20 @@ class DialogService {
     await prisma.chat.create({
       data: {
         users: {
-          connect: [
-            {
-              id: userId,
-            },
-            {
-              id: partnerId,
-            },
-          ],
+          connect: [user, partner],
         },
         dialogs: {
           createMany: {
             data: [
               {
                 title: partnerData.email,
-                userId,
-                partnerId,
+                userId: user.id,
+                partnerId: partnerData.id,
               },
               {
-                title: userEmail,
-                userId: partnerId,
-                partnerId: userId,
+                title: user.email,
+                userId: partnerData.id,
+                partnerId: user.id,
               },
             ],
           },
@@ -197,7 +175,7 @@ class DialogService {
       },
     });
 
-    return this.get({ userId, partnerId });
+    return this.get({ userId: user.id, partner });
   }
 
   async search(
@@ -279,20 +257,19 @@ class DialogService {
 
   async join({
     user,
-    partnerId,
+    partner,
     messagesLimit = 40,
   }: {
     user: Pick<UserDto, 'id' | 'email'>;
-    partnerId: number;
+    partner: { id: number } | { username: string };
     messagesLimit?: number;
   }) {
-    let dialogData = await dialogService.get({ userId: user.id, partnerId }).catch(() => null);
+    let dialogData = await dialogService.get({ userId: user.id, partner }).catch(() => null);
 
     if (!dialogData) {
       dialogData = await dialogService.create({
-        userId: user.id,
-        userEmail: user.email,
-        partnerId,
+        user,
+        partner,
       });
     }
 

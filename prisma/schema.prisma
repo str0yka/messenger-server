@@ -9,10 +9,10 @@ datasource db {
 
 model User {
   id               Int           @id @default(autoincrement())
-  name             String?
+  name             String        @default("name")
   lastname         String?
   bio              String?
-  username         String?
+  username         String?       @unique
   email            String        @unique
   password         String
   verification     Verification?
