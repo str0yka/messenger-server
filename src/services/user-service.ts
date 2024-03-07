@@ -139,6 +139,7 @@ class UserService {
         name: true,
         updatedAt: true,
         username: true,
+        status: true,
       },
     });
   }
@@ -146,7 +147,7 @@ class UserService {
   async update({
     id,
     ...updateFields
-  }: Partial<Pick<User, 'bio' | 'lastname' | 'name' | 'username'>> & {
+  }: Partial<Pick<User, 'bio' | 'lastname' | 'name' | 'username' | 'status'>> & {
     id: User['id'];
   }) {
     return prisma.user.update({ where: { id }, data: updateFields });
@@ -154,6 +155,24 @@ class UserService {
 
   async get(params: { id: number } | { email: string } | { username: string }) {
     return prisma.user.findUnique({ where: params });
+  }
+
+  async getAllUsersWithWhomThereIsADialog({ userId }: { userId: User['id'] }) {
+    return prisma.user.findMany({
+      where: { userInDialogs: { some: { partnerId: userId } } },
+      select: {
+        id: true,
+        email: true,
+        isVerified: true,
+        bio: true,
+        createdAt: true,
+        lastname: true,
+        name: true,
+        updatedAt: true,
+        username: true,
+        status: true,
+      },
+    });
   }
 }
 

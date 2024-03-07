@@ -25,6 +25,7 @@ class DialogService {
             name: true,
             updatedAt: true,
             username: true,
+            status: true,
           },
         },
         partner: {
@@ -38,6 +39,7 @@ class DialogService {
             name: true,
             updatedAt: true,
             username: true,
+            status: true,
           },
         },
         _count: {
@@ -88,6 +90,7 @@ class DialogService {
             name: true,
             updatedAt: true,
             username: true,
+            status: true,
           },
         },
         partner: {
@@ -101,6 +104,7 @@ class DialogService {
             name: true,
             updatedAt: true,
             username: true,
+            status: true,
           },
         },
         messages: {
@@ -124,15 +128,21 @@ class DialogService {
       },
     });
 
-    return dialogsData.map((dialogData) => {
-      const {
-        messages,
-        _count: { messages: unreadedMessagesCount },
-        ...dialog
-      } = dialogData;
+    return dialogsData
+      .map((dialogData) => {
+        const {
+          messages,
+          _count: { messages: unreadedMessagesCount },
+          ...dialog
+        } = dialogData;
 
-      return { dialog, lastMessage: messages[0], unreadedMessagesCount };
-    });
+        return { dialog, lastMessage: messages[0], unreadedMessagesCount };
+      })
+      .sort(
+        (firstDialog, secondDialog) =>
+          secondDialog.lastMessage.createdAt.valueOf() -
+          firstDialog.lastMessage.createdAt.valueOf(),
+      );
   }
 
   async create({
@@ -282,28 +292,11 @@ class DialogService {
 
     let messagesData;
     if (firstUnreadMessageData) {
-      messagesData = await messageService.get({
+      messagesData = await messageService.getByMessage({
         dialogId: dialog.id,
-        filter: {
-          orderBy: { createdAt: 'desc' },
-          cursor: { id: firstUnreadMessageData.id },
-          take: -messagesLimit,
-        },
+        message: firstUnreadMessageData,
+        limit: messagesLimit,
       });
-
-      if (messagesData.length < messagesLimit) {
-        const otherMessagesData = await messageService.get({
-          dialogId: dialog.id,
-          filter: {
-            orderBy: { createdAt: 'desc' },
-            cursor: { id: firstUnreadMessageData.id },
-            take: messagesLimit - messagesData.length,
-            skip: 1,
-          },
-        });
-
-        messagesData = [...messagesData, ...otherMessagesData];
-      }
     } else {
       messagesData = await messageService.get({
         dialogId: dialog.id,
@@ -312,6 +305,19 @@ class DialogService {
     }
 
     return { dialog, lastMessage, unreadedMessagesCount, messages: messagesData };
+  }
+
+  async updatePartnerDialogStatus({
+    userId,
+    partnerId,
+    status,
+  }: {
+    userId: User['id'];
+    partnerId: User['id'];
+    status: Dialog['status'];
+  }) {
+    const partnerDialogData = await this.get({ userId: partnerId, partnerId: userId });
+    return prisma.dialog.update({ where: { id: partnerDialogData.dialog.id }, data: { status } });
   }
 }
 

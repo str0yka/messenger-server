@@ -219,6 +219,41 @@ class MessageService {
 
     return firstUnreadMessageData;
   }
+
+  async getByMessage({
+    dialogId,
+    message,
+    limit = 40,
+  }: {
+    dialogId: Dialog['id'];
+    message: Message;
+    limit?: number;
+  }) {
+    let messagesData = await this.get({
+      dialogId,
+      filter: {
+        orderBy: { createdAt: 'desc' },
+        cursor: { id: message.id },
+        take: -limit / 2,
+      },
+    });
+
+    if (messagesData.length < limit) {
+      const otherMessagesData = await this.get({
+        dialogId,
+        filter: {
+          orderBy: { createdAt: 'desc' },
+          cursor: { id: message.id },
+          take: limit - messagesData.length,
+          skip: 1,
+        },
+      });
+
+      messagesData = [...messagesData, ...otherMessagesData];
+    }
+
+    return messagesData;
+  }
 }
 
 export const messageService = new MessageService();
