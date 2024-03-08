@@ -3,6 +3,7 @@ import bcrypt from 'bcrypt';
 import { UserDto } from '../dtos';
 import { ApiError } from '../exceptions';
 import { prisma } from '../prisma';
+import { PRISMA_SELECT } from '../utils/constants';
 
 import { mailService } from './mail-service';
 import { tokenService } from './token-service';
@@ -42,7 +43,7 @@ class UserService {
     return { user: userDto, ...tokens };
   }
 
-  async login(email: string, password: string) {
+  async login({ email, password }: { email: string; password: string }) {
     const user = await prisma.user.findUnique({ where: { email } });
 
     if (!user) {
@@ -62,7 +63,7 @@ class UserService {
     return { user: userDto, ...tokens };
   }
 
-  async logout(refreshToken: Token['refreshToken']) {
+  async logout({ refreshToken }: { refreshToken: Token['refreshToken'] }) {
     if (!refreshToken) {
       throw ApiError.UnauthorizedError();
     }
@@ -70,7 +71,7 @@ class UserService {
     await tokenService.removeToken(refreshToken);
   }
 
-  async refresh(refreshToken: Token['refreshToken']) {
+  async refresh({ refreshToken }: { refreshToken: Token['refreshToken'] }) {
     if (!refreshToken) {
       throw ApiError.UnauthorizedError();
     }
@@ -95,10 +96,13 @@ class UserService {
     return { user: userDto, ...tokens };
   }
 
-  async search(
-    { query, limit = 50, page = 1 }: Record<string, string | number | undefined>,
-    userId?: User['id'],
-  ) {
+  async search({
+    user,
+    search: { query, limit = 50, page = 1 },
+  }: {
+    user?: { id: number };
+    search: Record<string, string | number | undefined>;
+  }) {
     if (!query) {
       return [];
     }
@@ -116,62 +120,39 @@ class UserService {
       where: {
         OR: [{ email: { contains: query } }, { username: { contains: query } }],
         isVerified: true,
-        ...(userId && {
+        ...(user && {
           id: {
-            not: userId,
+            not: user.id,
           },
           NOT: {
             partnerInDialogs: {
               some: {
-                userId,
+                user,
               },
             },
           },
         }),
       },
-      select: {
-        id: true,
-        email: true,
-        isVerified: true,
-        bio: true,
-        createdAt: true,
-        lastname: true,
-        name: true,
-        updatedAt: true,
-        username: true,
-        status: true,
-      },
+      select: PRISMA_SELECT.USER,
     });
   }
 
   async update({
-    id,
-    ...updateFields
-  }: Partial<Pick<User, 'bio' | 'lastname' | 'name' | 'username' | 'status'>> & {
-    id: User['id'];
+    user: { id, ...updateFields },
+  }: {
+    user: { id: number } & Partial<Pick<User, 'bio' | 'lastname' | 'name' | 'username' | 'status'>>;
   }) {
     return prisma.user.update({ where: { id }, data: updateFields });
   }
 
-  async get(params: { id: number } | { email: string } | { username: string }) {
-    return prisma.user.findUnique({ where: params });
+  async get({ user }: { user: { id: number } | { email: string } | { username: string } }) {
+    return prisma.user.findUnique({ where: user });
   }
 
-  async getAllUsersWithWhomThereIsADialog({ userId }: { userId: User['id'] }) {
+  async getAllUsersWithWhomThereIsADialog({ user }: { user: { id: number } }) {
     return prisma.user.findMany({
-      where: { userInDialogs: { some: { partnerId: userId } } },
-      select: {
-        id: true,
-        email: true,
-        isVerified: true,
-        bio: true,
-        createdAt: true,
-        lastname: true,
-        name: true,
-        updatedAt: true,
-        username: true,
-        status: true,
-      },
+      where: { userInDialogs: { some: { partnerId: user.id } } },
+      select: PRISMA_SELECT.USER,
     });
   }
 }

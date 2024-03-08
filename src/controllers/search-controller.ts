@@ -17,15 +17,13 @@ class SearchController {
         throw ApiError.BadRequest('Unexpected query types');
       }
 
+      let response;
       if (type === 'dialog') {
-        const dialogs = await dialogService.search({ query, limit, page }, user.id);
-        return res.json(dialogs);
+        response = await dialogService.search({ user, search: { query, limit, page } });
+      } else if (type === 'user') {
+        response = await userService.search({ user, search: { query, limit, page } });
       }
-
-      if (type === 'user') {
-        const users = await userService.search({ query, limit, page }, user.id);
-        return res.json(users);
-      }
+      return res.json(response);
     } catch (e) {
       next(e);
     }

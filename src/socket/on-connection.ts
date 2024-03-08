@@ -17,32 +17,38 @@ export const onConnection = async (io: IO.Server, socket: IO.Socket) => {
     return; // $FIXME
   }
 
-  socket.data.user = {
+  const user = {
     id: Number(id),
     email: email,
     isVerified: true,
   };
+
+  socket.data.user = user;
 
   socket.join(`user-${id}`);
 
   messageHandler(io, socket);
   dialogHandler(io, socket);
 
-  await userService.update({ id: Number(id), status: 'ONLINE' });
+  await userService.update({ user: { ...user, status: 'ONLINE' } });
   const usersWithWhomThereIsADialog = await userService.getAllUsersWithWhomThereIsADialog({
-    userId: Number(id),
+    user,
   });
-  io.to(usersWithWhomThereIsADialog.map((user) => `user-${user.id}`)).emit(
-    'SERVER:DIALOGS_NEED_TO_UPDATE',
-  );
+  io.to(
+    usersWithWhomThereIsADialog.map(
+      (userWithWhomThereIsADialog) => `user-${userWithWhomThereIsADialog.id}`,
+    ),
+  ).emit('SERVER:DIALOGS_NEED_TO_UPDATE');
 
   socket.on('disconnect', async () => {
-    await userService.update({ id: Number(id), status: 'OFFLINE' });
+    await userService.update({ user: { ...user, status: 'OFFLINE' } });
     const usersWithWhomThereIsADialog = await userService.getAllUsersWithWhomThereIsADialog({
-      userId: Number(id),
+      user,
     });
-    io.to(usersWithWhomThereIsADialog.map((user) => `user-${user.id}`)).emit(
-      'SERVER:DIALOGS_NEED_TO_UPDATE',
-    );
+    io.to(
+      usersWithWhomThereIsADialog.map(
+        (userWithWhomThereIsADialog) => `user-${userWithWhomThereIsADialog.id}`,
+      ),
+    ).emit('SERVER:DIALOGS_NEED_TO_UPDATE');
   });
 };

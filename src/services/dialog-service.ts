@@ -1,46 +1,27 @@
+import { DialogDto } from '../dtos';
 import { ApiError } from '../exceptions';
 import { prisma } from '../prisma';
+import { PRISMA_SELECT } from '../utils/constants';
 
 import { messageService } from './message-service';
 import { userService } from './user-service';
 
 class DialogService {
-  async get(
-    params:
-      | { userId: User['id']; partner: { id: User['id'] } | { username: User['username'] } }
-      | { userId: User['id']; partnerId: User['id'] }
-      | { id: Dialog['id']; userId: User['id'] },
-  ) {
+  async get({
+    user,
+    dialog,
+  }: {
+    user: { id: number };
+    dialog: { id: number } | { partner: { id: User['id'] } | { username: User['username'] } };
+  }): Promise<DialogDto> {
     const dialogData = await prisma.dialog.findFirstOrThrow({
-      where: params,
+      where: { user, ...dialog },
       include: {
         user: {
-          select: {
-            id: true,
-            email: true,
-            isVerified: true,
-            bio: true,
-            createdAt: true,
-            lastname: true,
-            name: true,
-            updatedAt: true,
-            username: true,
-            status: true,
-          },
+          select: PRISMA_SELECT.USER,
         },
         partner: {
-          select: {
-            id: true,
-            email: true,
-            isVerified: true,
-            bio: true,
-            createdAt: true,
-            lastname: true,
-            name: true,
-            updatedAt: true,
-            username: true,
-            status: true,
-          },
+          select: PRISMA_SELECT.USER,
         },
         _count: {
           select: {
@@ -48,7 +29,7 @@ class DialogService {
               where: {
                 read: false,
                 userId: {
-                  not: params.userId,
+                  not: user.id,
                 },
               },
             },
@@ -69,43 +50,28 @@ class DialogService {
       ...otherDialogData
     } = dialogData;
 
-    return { dialog: otherDialogData, lastMessage: messages.at(0), unreadedMessagesCount };
+    return DialogDto({
+      dialog: otherDialogData,
+      lastMessage: messages.at(0) ?? null,
+      unreadedMessagesCount,
+    });
   }
 
-  async getAll(userId: User['id']) {
+  async getDialogsInChat({ chat }: { chat: { id: number } }): Promise<Dialog[]> {
+    return prisma.dialog.findMany({ where: { chat } });
+  }
+
+  async getAll({ user }: { user: { id: number } }): Promise<DialogDto[]> {
     const dialogsData = await prisma.dialog.findMany({
       where: {
-        userId,
-        // take dialogs where dialog started (have 1 or more messages)
+        user,
       },
       include: {
         user: {
-          select: {
-            id: true,
-            email: true,
-            isVerified: true,
-            bio: true,
-            createdAt: true,
-            lastname: true,
-            name: true,
-            updatedAt: true,
-            username: true,
-            status: true,
-          },
+          select: PRISMA_SELECT.USER,
         },
         partner: {
-          select: {
-            id: true,
-            email: true,
-            isVerified: true,
-            bio: true,
-            createdAt: true,
-            lastname: true,
-            name: true,
-            updatedAt: true,
-            username: true,
-            status: true,
-          },
+          select: PRISMA_SELECT.USER,
         },
         messages: {
           orderBy: {
@@ -119,7 +85,7 @@ class DialogService {
               where: {
                 read: false,
                 userId: {
-                  not: userId,
+                  not: user.id,
                 },
               },
             },
@@ -136,12 +102,13 @@ class DialogService {
           ...dialog
         } = dialogData;
 
-        return { dialog, lastMessage: messages[0], unreadedMessagesCount };
+        return DialogDto({ dialog, lastMessage: messages.at(0) ?? null, unreadedMessagesCount });
       })
+      .filter((dialogData) => !!dialogData.lastMessage)
       .sort(
         (firstDialog, secondDialog) =>
-          secondDialog.lastMessage.createdAt.valueOf() -
-          firstDialog.lastMessage.createdAt.valueOf(),
+          secondDialog.lastMessage!.createdAt.valueOf() -
+          firstDialog.lastMessage!.createdAt.valueOf(),
       );
   }
 
@@ -149,12 +116,13 @@ class DialogService {
     user,
     partner,
   }: {
-    user: Pick<User, 'id' | 'email'>;
+    user: { id: number; email: string };
     partner: { id: number } | { username: string };
-  }) {
-    const partnerData = await userService.get(partner);
+  }): Promise<DialogDto> {
+    const userData = await userService.get({ user });
+    const partnerData = await userService.get({ user: partner });
 
-    if (!partnerData) {
+    if (!partnerData || !userData) {
       throw ApiError.BadRequest(`User isn't exist`);
     }
 
@@ -167,14 +135,14 @@ class DialogService {
           createMany: {
             data: [
               {
-                title: partnerData.email,
-                userId: user.id,
+                title: partnerData.name,
+                userId: userData.id,
                 partnerId: partnerData.id,
               },
               {
-                title: user.email,
+                title: userData.name,
                 userId: partnerData.id,
-                partnerId: user.id,
+                partnerId: userData.id,
               },
             ],
           },
@@ -185,13 +153,16 @@ class DialogService {
       },
     });
 
-    return this.get({ userId: user.id, partner });
+    return this.get({ user, dialog: { partner: partnerData } });
   }
 
-  async search(
-    { query, limit = 50, page = 1 }: Record<string, string | number | undefined>,
-    userId: User['id'],
-  ) {
+  async search({
+    user,
+    search: { query, limit, page },
+  }: {
+    user: { id: number };
+    search: Record<string, string | number | undefined>;
+  }): Promise<DialogDto[]> {
     if (!query) {
       return [];
     }
@@ -205,37 +176,17 @@ class DialogService {
 
     const searchData = await prisma.dialog.findMany({
       where: {
-        userId,
+        user,
         title: { contains: query },
       },
       take: limit,
       skip: (page - 1) * limit,
       include: {
         user: {
-          select: {
-            id: true,
-            email: true,
-            isVerified: true,
-            bio: true,
-            createdAt: true,
-            lastname: true,
-            name: true,
-            updatedAt: true,
-            username: true,
-          },
+          select: PRISMA_SELECT.USER,
         },
         partner: {
-          select: {
-            id: true,
-            email: true,
-            isVerified: true,
-            bio: true,
-            createdAt: true,
-            lastname: true,
-            name: true,
-            updatedAt: true,
-            username: true,
-          },
+          select: PRISMA_SELECT.USER,
         },
         messages: {
           orderBy: {
@@ -249,7 +200,7 @@ class DialogService {
               where: {
                 read: false,
                 userId: {
-                  not: userId,
+                  not: user.id,
                 },
               },
             },
@@ -259,9 +210,17 @@ class DialogService {
     });
 
     return searchData.map((dialog) => {
-      const { messages, ...dialogData } = dialog;
+      const {
+        messages,
+        _count: { messages: unreadedMessagesCount },
+        ...dialogData
+      } = dialog;
 
-      return { ...dialogData, lastMessage: messages[0] };
+      return DialogDto({
+        dialog: dialogData,
+        lastMessage: messages.at(0) ?? null,
+        unreadedMessagesCount,
+      });
     });
   }
 
@@ -273,51 +232,79 @@ class DialogService {
     user: Pick<UserDto, 'id' | 'email'>;
     partner: { id: number } | { username: string };
     messagesLimit?: number;
-  }) {
-    let dialogData = await dialogService.get({ userId: user.id, partner }).catch(() => null);
-
-    if (!dialogData) {
+  }): Promise<{ dialog: DialogDto; messages: Message[] }> {
+    let dialogData;
+    try {
+      dialogData = await dialogService.get({ user, dialog: { partner } });
+    } catch {
       dialogData = await dialogService.create({
         user,
         partner,
       });
     }
 
-    const { dialog, lastMessage, unreadedMessagesCount } = dialogData;
-
     const firstUnreadMessageData = await messageService.findFirstUnreadMessage({
-      dialogId: dialog.id,
-      userId: user.id,
+      dialog: dialogData,
+      user,
     });
 
     let messagesData;
     if (firstUnreadMessageData) {
       messagesData = await messageService.getByMessage({
-        dialogId: dialog.id,
+        dialog: dialogData,
         message: firstUnreadMessageData,
         limit: messagesLimit,
       });
     } else {
       messagesData = await messageService.get({
-        dialogId: dialog.id,
+        dialog: dialogData,
         filter: { orderBy: { createdAt: 'desc' }, take: messagesLimit },
       });
     }
 
-    return { dialog, lastMessage, unreadedMessagesCount, messages: messagesData };
+    return { dialog: dialogData, messages: messagesData };
   }
 
   async updatePartnerDialogStatus({
-    userId,
-    partnerId,
+    user,
+    partner,
     status,
   }: {
-    userId: User['id'];
-    partnerId: User['id'];
+    user: { id: number };
+    partner: { id: number };
     status: Dialog['status'];
   }) {
-    const partnerDialogData = await this.get({ userId: partnerId, partnerId: userId });
-    return prisma.dialog.update({ where: { id: partnerDialogData.dialog.id }, data: { status } });
+    const partnerDialogData = await this.get({ user: partner, dialog: { partner: user } });
+    return prisma.dialog.update({
+      where: { id: partnerDialogData.id },
+      data: { status },
+      include: {
+        user: {
+          select: PRISMA_SELECT.USER,
+        },
+        partner: {
+          select: PRISMA_SELECT.USER,
+        },
+        messages: {
+          orderBy: {
+            createdAt: 'desc',
+          },
+          take: 1,
+        },
+        _count: {
+          select: {
+            messages: {
+              where: {
+                read: false,
+                userId: {
+                  not: partner.id,
+                },
+              },
+            },
+          },
+        },
+      },
+    });
   }
 }
 

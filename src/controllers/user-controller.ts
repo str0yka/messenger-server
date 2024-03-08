@@ -26,7 +26,7 @@ class UserController {
     try {
       const { email, password } = req.body;
 
-      const userData = await userService.login(email, password);
+      const userData = await userService.login({ email, password });
 
       res.cookie('refreshToken', userData.refreshToken, {
         maxAge: 1000 * 60 * 60 * 24 * 30, // 30 days
@@ -65,7 +65,7 @@ class UserController {
     try {
       const { refreshToken } = req.cookies;
 
-      await userService.logout(refreshToken);
+      await userService.logout({ refreshToken });
 
       res.clearCookie('refreshToken');
 
@@ -83,7 +83,7 @@ class UserController {
     try {
       const { refreshToken } = req.cookies;
 
-      const userData = await userService.refresh(refreshToken);
+      const userData = await userService.refresh({ refreshToken });
 
       res.cookie('refreshToken', userData.refreshToken, {
         maxAge: 1000 * 60 * 60 * 24 * 30, // 30 days

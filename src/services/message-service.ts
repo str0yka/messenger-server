@@ -2,17 +2,17 @@ import { prisma } from '../prisma';
 
 class MessageService {
   async send({
-    userId,
-    chatId,
+    user,
+    chat,
     message,
   }: {
-    userId: User['id'];
-    chatId: Chat['id'];
+    user: { id: number };
+    chat: { id: number };
     message: Pick<Message, 'message' | 'createdAt'>;
   }) {
     const chatData = await prisma.chat.findUniqueOrThrow({
       where: {
-        id: chatId,
+        id: chat.id,
       },
       select: {
         id: true,
@@ -27,50 +27,45 @@ class MessageService {
     const messageData = await prisma.message.create({
       data: {
         ...message,
-        userId,
+        userId: user.id,
         dialogs: {
-          connect: chatData.dialogs.map((dialog) => ({
-            id: dialog.id,
+          connect: chatData.dialogs.map((dialogData) => ({
+            id: dialogData.id,
           })),
         },
-      },
-      include: {
-        dialogs: true,
       },
     });
 
     return messageData;
   }
 
-  async delete(
-    messageId: Message['id'],
-    dialogId: Dialog['id'],
-    deleteForEveryone: boolean = false,
-  ) {
+  async delete({
+    message,
+    dialog,
+    deleteForEveryone = false,
+  }: {
+    message: { id: number };
+    dialog: { id: number };
+    deleteForEveryone?: boolean;
+  }) {
     let messageData;
     if (deleteForEveryone) {
       messageData = await prisma.message.delete({
         where: {
-          id: messageId,
-        },
-        include: {
-          dialogs: true,
+          id: message.id,
         },
       });
     } else {
       messageData = await prisma.message.update({
         where: {
-          id: messageId,
+          id: message.id,
         },
         data: {
           dialogs: {
             disconnect: {
-              id: dialogId,
+              id: dialog.id,
             },
           },
-        },
-        include: {
-          dialogs: true,
         },
       });
     }
@@ -78,15 +73,7 @@ class MessageService {
     return messageData;
   }
 
-  async read({
-    message,
-    dialogId,
-    userId,
-  }: {
-    message: Message;
-    dialogId: Dialog['id'];
-    userId: UserDto['id'];
-  }) {
+  async read({ message }: { message: { id: number } }) {
     const messageData = await prisma.message.update({
       where: {
         id: message.id,
@@ -96,36 +83,14 @@ class MessageService {
       },
     });
 
-    const {
-      _count: { messages: unreadedMessagesCount },
-    } = await prisma.dialog.findUniqueOrThrow({
-      where: {
-        id: dialogId,
-      },
-      select: {
-        _count: {
-          select: {
-            messages: {
-              where: {
-                id: {
-                  not: userId,
-                },
-                read: false,
-              },
-            },
-          },
-        },
-      },
-    });
-
-    return { messageData, unreadedMessagesCount };
+    return messageData;
   }
 
   async get({
-    dialogId,
+    dialog,
     filter,
   }: {
-    dialogId: Dialog['id'];
+    dialog: { id: number };
     filter?: {
       orderBy?: {
         createdAt?: 'desc' | 'asc';
@@ -139,7 +104,7 @@ class MessageService {
   }) {
     const { messages } = await prisma.dialog.findUniqueOrThrow({
       where: {
-        id: dialogId,
+        id: dialog.id,
       },
       select: {
         messages: true,
@@ -150,12 +115,20 @@ class MessageService {
     return messages;
   }
 
-  async getByDate(dialogId: Dialog['id'], timestamp: number, take: number) {
+  async getByDate({
+    dialog,
+    take,
+    timestamp,
+  }: {
+    dialog: { id: number };
+    timestamp: number;
+    take: number;
+  }) {
     const date = new Date(timestamp);
 
     const { messages: afterMessages } = await prisma.dialog.findUniqueOrThrow({
       where: {
-        id: dialogId,
+        id: dialog.id,
       },
       select: {
         messages: {
@@ -174,7 +147,7 @@ class MessageService {
 
     const { messages: beforeMessages } = await prisma.dialog.findUniqueOrThrow({
       where: {
-        id: dialogId,
+        id: dialog.id,
       },
       select: {
         messages: {
@@ -191,46 +164,40 @@ class MessageService {
       },
     });
 
-    const firstFoundMessage = afterMessages.at(0) ?? beforeMessages.at(0)!;
+    const firstFoundMessage = afterMessages.at(0) ?? beforeMessages.at(0);
 
     return { firstFoundMessage, messages: [...afterMessages.reverse(), ...beforeMessages] };
   }
 
-  async findFirstUnreadMessage({
-    userId,
-    dialogId,
-  }: {
-    userId: User['id'];
-    dialogId: Dialog['id'];
-  }) {
-    const firstUnreadMessageData = await prisma.message.findFirst({
+  async findFirstUnreadMessage({ user, dialog }: { user: { id: number }; dialog: { id: number } }) {
+    const messageData = await prisma.message.findFirst({
       where: {
         dialogs: {
           some: {
-            id: dialogId,
+            id: dialog.id,
           },
         },
         read: false,
         userId: {
-          not: userId,
+          not: user.id,
         },
       },
     });
 
-    return firstUnreadMessageData;
+    return messageData;
   }
 
   async getByMessage({
-    dialogId,
+    dialog,
     message,
     limit = 40,
   }: {
-    dialogId: Dialog['id'];
-    message: Message;
+    dialog: { id: number };
+    message: { id: number };
     limit?: number;
   }) {
     let messagesData = await this.get({
-      dialogId,
+      dialog,
       filter: {
         orderBy: { createdAt: 'desc' },
         cursor: { id: message.id },
@@ -240,7 +207,7 @@ class MessageService {
 
     if (messagesData.length < limit) {
       const otherMessagesData = await this.get({
-        dialogId,
+        dialog,
         filter: {
           orderBy: { createdAt: 'desc' },
           cursor: { id: message.id },
