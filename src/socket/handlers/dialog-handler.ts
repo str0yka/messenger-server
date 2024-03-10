@@ -3,7 +3,7 @@ import { dialogService } from '../../services';
 export const dialogHandler = (io: IO.Server, socket: IO.Socket) => {
   socket.on('CLIENT:DIALOG_JOIN', async ({ partner, messagesLimit }) => {
     const { dialog, messages } = await dialogService.join({
-      user: socket.data.user,
+      user: { id: socket.data.user.id, email: socket.data.user.email },
       partner,
       messagesLimit,
     });
@@ -25,24 +25,30 @@ export const dialogHandler = (io: IO.Server, socket: IO.Socket) => {
     if (!socket.data.dialog) return;
 
     const dialogData = await dialogService.get({
-      dialog: socket.data.dialog,
-      user: socket.data.user,
+      id: socket.data.dialog.id,
+      userId: socket.data.user.id,
     });
 
     socket.emit('SERVER:DIALOG_GET_RESPONSE', { dialog: dialogData });
   });
 
   socket.on('CLIENT:DIALOGS_GET', async () => {
-    const dialogs = await dialogService.getAll({ user: socket.data.user });
+    const dialogs = await dialogService.getAll({ userId: socket.data.user.id });
 
     socket.emit('SERVER:DIALOGS_PUT', { dialogs });
   });
 
-  socket.on('CLIENT:UPDATE_DIALOG_STATUS', async ({ partnerId, status }) => {
-    const partnerDialogData = await dialogService.updatePartnerDialogStatus({
-      user: socket.data.user,
-      partner: { id: partnerId },
-      status,
+  socket.on('CLIENT:UPDATE_DIALOG_STATUS', async ({ status }) => {
+    if (!socket.data.dialog) return;
+
+    const partnerDialogData = await dialogService.get({
+      userId: socket.data.dialog.partnerId,
+      partnerId: socket.data.user.id,
+    });
+
+    await dialogService.update({
+      userId: socket.data.dialog.partnerId,
+      dialog: { id: partnerDialogData.id, status },
     });
 
     io.to(`chat-${partnerDialogData.chatId}`).emit('SERVER:DIALOG_NEED_TO_UPDATE');

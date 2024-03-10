@@ -40,10 +40,7 @@ interface ClientToServerEvents {
     method?: 'PUT' | 'PATCH';
   }) => void;
   'CLIENT:JUMP_TO_DATE': (params: { timestamp: number; take: number }) => void;
-  'CLIENT:UPDATE_DIALOG_STATUS': (params: {
-    partnerId: User['id'];
-    status: Dialog['status'];
-  }) => void;
+  'CLIENT:UPDATE_DIALOG_STATUS': (params: { status: DialogDto['status'] }) => void;
 }
 
 interface InterServerEvents {}

@@ -97,10 +97,10 @@ class UserService {
   }
 
   async search({
-    user,
+    userId,
     search: { query, limit = 50, page = 1 },
   }: {
-    user?: { id: number };
+    userId?: number;
     search: Record<string, string | number | undefined>;
   }) {
     if (!query) {
@@ -120,14 +120,14 @@ class UserService {
       where: {
         OR: [{ email: { contains: query } }, { username: { contains: query } }],
         isVerified: true,
-        ...(user && {
+        ...(userId && {
           id: {
-            not: user.id,
+            not: userId,
           },
           NOT: {
             partnerInDialogs: {
               some: {
-                user,
+                userId,
               },
             },
           },
@@ -138,20 +138,24 @@ class UserService {
   }
 
   async update({
-    user: { id, ...updateFields },
-  }: {
-    user: { id: number } & Partial<Pick<User, 'bio' | 'lastname' | 'name' | 'username' | 'status'>>;
-  }) {
+    id,
+    ...updateFields
+  }: { id: number } & Partial<Pick<User, 'bio' | 'lastname' | 'name' | 'username' | 'status'>>) {
     return prisma.user.update({ where: { id }, data: updateFields });
   }
 
-  async get({ user }: { user: { id: number } | { email: string } | { username: string } }) {
-    return prisma.user.findUnique({ where: user });
+  async get(
+    user: { id: number } | { email: string } | { username: string },
+  ): Promise<UserDto | null> {
+    return prisma.user.findUnique({
+      where: user,
+      select: PRISMA_SELECT.USER,
+    });
   }
 
-  async getAllUsersWithWhomThereIsADialog({ user }: { user: { id: number } }) {
+  async getAllUsersWithWhomThereIsADialog({ userId }: { userId: number }): Promise<UserDto[]> {
     return prisma.user.findMany({
-      where: { userInDialogs: { some: { partnerId: user.id } } },
+      where: { userInDialogs: { some: { partnerId: userId } } },
       select: PRISMA_SELECT.USER,
     });
   }

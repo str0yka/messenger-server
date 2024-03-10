@@ -19,9 +19,9 @@ class SearchController {
 
       let response;
       if (type === 'dialog') {
-        response = await dialogService.search({ user, search: { query, limit, page } });
+        response = await dialogService.search({ userId: user.id, search: { query, limit, page } });
       } else if (type === 'user') {
-        response = await userService.search({ user, search: { query, limit, page } });
+        response = await userService.search({ userId: user.id, search: { query, limit, page } });
       }
       return res.json(response);
     } catch (e) {

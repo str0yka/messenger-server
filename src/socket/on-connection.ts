@@ -30,9 +30,9 @@ export const onConnection = async (io: IO.Server, socket: IO.Socket) => {
   messageHandler(io, socket);
   dialogHandler(io, socket);
 
-  await userService.update({ user: { ...user, status: 'ONLINE' } });
+  await userService.update({ id: user.id, status: 'ONLINE' });
   const usersWithWhomThereIsADialog = await userService.getAllUsersWithWhomThereIsADialog({
-    user,
+    userId: user.id,
   });
   io.to(
     usersWithWhomThereIsADialog.map(
@@ -41,9 +41,9 @@ export const onConnection = async (io: IO.Server, socket: IO.Socket) => {
   ).emit('SERVER:DIALOGS_NEED_TO_UPDATE');
 
   socket.on('disconnect', async () => {
-    await userService.update({ user: { ...user, status: 'OFFLINE' } });
+    await userService.update({ id: user.id, status: 'OFFLINE' });
     const usersWithWhomThereIsADialog = await userService.getAllUsersWithWhomThereIsADialog({
-      user,
+      userId: user.id,
     });
     io.to(
       usersWithWhomThereIsADialog.map(

@@ -5,12 +5,12 @@ export const messageHandler = (io: IO.Server, socket: IO.Socket) => {
     if (!socket.data.dialog) return;
 
     const messageData = await messageService.read({
-      message: readMessage,
+      messageId: readMessage.id,
     });
 
     const dialogData = await dialogService.get({
-      dialog: socket.data.dialog,
-      user: socket.data.user,
+      userId: socket.data.user.id,
+      id: socket.data.dialog.id,
     });
 
     socket.emit('SERVER:MESSAGE_READ_RESPONSE', {
@@ -30,12 +30,12 @@ export const messageHandler = (io: IO.Server, socket: IO.Socket) => {
         message: message.message,
         createdAt: new Date(message.createdAt),
       },
-      user: socket.data.user,
-      chat: { id: socket.data.dialog.chatId },
+      userId: socket.data.user.id,
+      chatId: socket.data.dialog.chatId,
     });
 
     const dialogsInChat = await dialogService.getDialogsInChat({
-      chat: { id: socket.data.dialog.chatId },
+      chatId: socket.data.dialog.chatId,
     });
 
     io.to(`chat-${socket.data.dialog.chatId}`).emit('SERVER:MESSAGE_ADD', { message: messageData });
@@ -49,13 +49,13 @@ export const messageHandler = (io: IO.Server, socket: IO.Socket) => {
     if (!socket.data.dialog) return;
 
     const messageData = await messageService.delete({
-      dialog: socket.data.dialog,
-      message: { id: messageId },
+      dialogId: socket.data.dialog.id,
+      messageId,
       deleteForEveryone,
     });
 
     const dialogsInChat = await dialogService.getDialogsInChat({
-      chat: { id: socket.data.dialog.chatId },
+      chatId: socket.data.dialog.chatId,
     });
 
     if (deleteForEveryone) {
@@ -76,7 +76,7 @@ export const messageHandler = (io: IO.Server, socket: IO.Socket) => {
   socket.on('CLIENT:MESSAGES_GET', async ({ filter, method = 'PATCH' }) => {
     if (!socket.data.dialog) return;
 
-    const messages = await messageService.get({ dialog: socket.data.dialog, filter });
+    const messages = await messageService.get({ dialogId: socket.data.dialog.id, filter });
 
     io.to(`user-${socket.data.user.id}`).emit(`SERVER:MESSAGES_${method}`, { messages });
   });
@@ -85,7 +85,7 @@ export const messageHandler = (io: IO.Server, socket: IO.Socket) => {
     if (!socket.data.dialog) return;
 
     const { messages, firstFoundMessage } = await messageService.getByDate({
-      dialog: socket.data.dialog,
+      dialogId: socket.data.dialog.id,
       take,
       timestamp,
     });

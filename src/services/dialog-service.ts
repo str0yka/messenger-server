@@ -7,15 +7,26 @@ import { messageService } from './message-service';
 import { userService } from './user-service';
 
 class DialogService {
-  async get({
-    user,
-    dialog,
-  }: {
-    user: { id: number };
-    dialog: { id: number } | { partner: { id: User['id'] } | { username: User['username'] } };
-  }): Promise<DialogDto> {
+  async get(
+    dialog: {
+      userId: number;
+    } & (
+      | { id: number }
+      | { partnerId: number }
+      | { partner: { username: string } | { id: number } }
+    ),
+  ): Promise<DialogDto> {
     const dialogData = await prisma.dialog.findFirstOrThrow({
-      where: { user, ...dialog },
+      where: {
+        userId: dialog.userId,
+        ...('id' in dialog && { id: dialog.id }),
+        ...('partner' in dialog && {
+          partner: {
+            ...('id' in dialog.partner && { id: dialog.partner.id }),
+            ...('username' in dialog.partner && { username: dialog.partner.username }),
+          },
+        }),
+      },
       include: {
         user: {
           select: PRISMA_SELECT.USER,
@@ -29,7 +40,7 @@ class DialogService {
               where: {
                 read: false,
                 userId: {
-                  not: user.id,
+                  not: dialog.userId,
                 },
               },
             },
@@ -57,14 +68,14 @@ class DialogService {
     });
   }
 
-  async getDialogsInChat({ chat }: { chat: { id: number } }): Promise<Dialog[]> {
-    return prisma.dialog.findMany({ where: { chat } });
+  async getDialogsInChat({ chatId }: { chatId: number }): Promise<Dialog[]> {
+    return prisma.dialog.findMany({ where: { chatId } });
   }
 
-  async getAll({ user }: { user: { id: number } }): Promise<DialogDto[]> {
+  async getAll({ userId }: { userId: number }): Promise<DialogDto[]> {
     const dialogsData = await prisma.dialog.findMany({
       where: {
-        user,
+        userId,
       },
       include: {
         user: {
@@ -85,7 +96,7 @@ class DialogService {
               where: {
                 read: false,
                 userId: {
-                  not: user.id,
+                  not: userId,
                 },
               },
             },
@@ -119,8 +130,8 @@ class DialogService {
     user: { id: number; email: string };
     partner: { id: number } | { username: string };
   }): Promise<DialogDto> {
-    const userData = await userService.get({ user });
-    const partnerData = await userService.get({ user: partner });
+    const userData = await userService.get({ id: user.id });
+    const partnerData = await userService.get(partner);
 
     if (!partnerData || !userData) {
       throw ApiError.BadRequest(`User isn't exist`);
@@ -129,7 +140,7 @@ class DialogService {
     await prisma.chat.create({
       data: {
         users: {
-          connect: [user, partner],
+          connect: [{ id: userData.id }, { id: partnerData.id }],
         },
         dialogs: {
           createMany: {
@@ -153,14 +164,14 @@ class DialogService {
       },
     });
 
-    return this.get({ user, dialog: { partner: partnerData } });
+    return this.get({ userId: userData.id, partnerId: partnerData.id });
   }
 
   async search({
-    user,
+    userId,
     search: { query, limit, page },
   }: {
-    user: { id: number };
+    userId: number;
     search: Record<string, string | number | undefined>;
   }): Promise<DialogDto[]> {
     if (!query) {
@@ -176,7 +187,7 @@ class DialogService {
 
     const searchData = await prisma.dialog.findMany({
       where: {
-        user,
+        userId,
         title: { contains: query },
       },
       take: limit,
@@ -200,7 +211,7 @@ class DialogService {
               where: {
                 read: false,
                 userId: {
-                  not: user.id,
+                  not: userId,
                 },
               },
             },
@@ -235,7 +246,10 @@ class DialogService {
   }): Promise<{ dialog: DialogDto; messages: Message[] }> {
     let dialogData;
     try {
-      dialogData = await dialogService.get({ user, dialog: { partner } });
+      dialogData = await dialogService.get({
+        userId: user.id,
+        partner,
+      });
     } catch {
       dialogData = await dialogService.create({
         user,
@@ -244,20 +258,20 @@ class DialogService {
     }
 
     const firstUnreadMessageData = await messageService.findFirstUnreadMessage({
-      dialog: dialogData,
-      user,
+      dialogId: dialogData.id,
+      userId: user.id,
     });
 
     let messagesData;
     if (firstUnreadMessageData) {
       messagesData = await messageService.getByMessage({
-        dialog: dialogData,
-        message: firstUnreadMessageData,
+        dialogId: dialogData.id,
+        messageId: firstUnreadMessageData.id,
         limit: messagesLimit,
       });
     } else {
       messagesData = await messageService.get({
-        dialog: dialogData,
+        dialogId: dialogData.id,
         filter: { orderBy: { createdAt: 'desc' }, take: messagesLimit },
       });
     }
@@ -265,19 +279,16 @@ class DialogService {
     return { dialog: dialogData, messages: messagesData };
   }
 
-  async updatePartnerDialogStatus({
-    user,
-    partner,
-    status,
+  async update({
+    userId,
+    dialog: { id: dialogId, ...updateFields },
   }: {
-    user: { id: number };
-    partner: { id: number };
-    status: Dialog['status'];
+    dialog: { id: number } & Partial<Pick<DialogDto, 'status' | 'title'>>;
+    userId: number;
   }) {
-    const partnerDialogData = await this.get({ user: partner, dialog: { partner: user } });
     return prisma.dialog.update({
-      where: { id: partnerDialogData.id },
-      data: { status },
+      where: { id: dialogId },
+      data: updateFields,
       include: {
         user: {
           select: PRISMA_SELECT.USER,
@@ -297,7 +308,7 @@ class DialogService {
               where: {
                 read: false,
                 userId: {
-                  not: partner.id,
+                  not: userId,
                 },
               },
             },
