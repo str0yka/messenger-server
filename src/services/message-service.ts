@@ -8,8 +8,9 @@ class MessageService {
   }: {
     userId: number;
     chatId: number;
-    message: Pick<Message, 'message' | 'createdAt'>;
-  }) {
+    message: Pick<MessageDto, 'message'> &
+      Partial<Pick<MessageDto, 'createdAt' | 'replyMessageId'>>;
+  }): Promise<MessageDto> {
     const chatData = await prisma.chat.findUniqueOrThrow({
       where: {
         id: chatId,
@@ -34,6 +35,9 @@ class MessageService {
           })),
         },
       },
+      include: {
+        replies: true,
+      },
     });
 
     return messageData;
@@ -47,12 +51,15 @@ class MessageService {
     messageId: number;
     dialogId: number;
     deleteForEveryone?: boolean;
-  }) {
+  }): Promise<MessageDto> {
     let messageData;
     if (deleteForEveryone) {
       messageData = await prisma.message.delete({
         where: {
           id: messageId,
+        },
+        include: {
+          replies: true,
         },
       });
     } else {
@@ -67,19 +74,25 @@ class MessageService {
             },
           },
         },
+        include: {
+          replies: true,
+        },
       });
     }
 
     return messageData;
   }
 
-  async read({ messageId }: { messageId: number }) {
+  async read({ messageId }: { messageId: number }): Promise<MessageDto> {
     return prisma.message.update({
       where: {
         id: messageId,
       },
       data: {
         read: true,
+      },
+      include: {
+        replies: true,
       },
     });
   }
@@ -99,14 +112,14 @@ class MessageService {
       };
       skip?: number;
     };
-  }) {
+  }): Promise<MessageDto[]> {
     const { messages } = await prisma.dialog.findUniqueOrThrow({
       where: {
         id: dialogId,
       },
       select: {
-        messages: true,
-        ...(filter && { messages: filter }),
+        messages: { include: { replies: true } },
+        ...(filter && { messages: { ...filter, include: { replies: true } } }),
       },
     });
 
@@ -121,7 +134,7 @@ class MessageService {
     dialogId: number;
     timestamp: number;
     take: number;
-  }) {
+  }): Promise<{ messages: MessageDto[]; firstFoundMessage?: MessageDto }> {
     const date = new Date(timestamp);
 
     const { messages: afterMessages } = await prisma.dialog.findUniqueOrThrow({
@@ -139,6 +152,7 @@ class MessageService {
           orderBy: {
             createdAt: 'asc',
           },
+          include: { replies: true },
         },
       },
     });
@@ -158,6 +172,7 @@ class MessageService {
           orderBy: {
             createdAt: 'desc',
           },
+          include: { replies: true },
         },
       },
     });
@@ -167,7 +182,13 @@ class MessageService {
     return { firstFoundMessage, messages: [...afterMessages.reverse(), ...beforeMessages] };
   }
 
-  async findFirstUnreadMessage({ userId, dialogId }: { userId: number; dialogId: number }) {
+  async findFirstUnreadMessage({
+    userId,
+    dialogId,
+  }: {
+    userId: number;
+    dialogId: number;
+  }): Promise<MessageDto | null> {
     return prisma.message.findFirst({
       where: {
         dialogs: {
@@ -180,6 +201,7 @@ class MessageService {
           not: userId,
         },
       },
+      include: { replies: true },
     });
   }
 
@@ -191,7 +213,7 @@ class MessageService {
     dialogId: number;
     messageId: number;
     limit?: number;
-  }) {
+  }): Promise<MessageDto[]> {
     let messagesData = await this.get({
       dialogId,
       filter: {

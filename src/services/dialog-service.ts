@@ -51,6 +51,7 @@ class DialogService {
             createdAt: 'desc',
           },
           take: 1,
+          include: { replies: true },
         },
       },
     });
@@ -89,6 +90,7 @@ class DialogService {
             createdAt: 'desc',
           },
           take: 1,
+          include: { replies: true },
         },
         _count: {
           select: {
@@ -204,6 +206,7 @@ class DialogService {
             createdAt: 'desc',
           },
           take: 1,
+          include: { replies: true },
         },
         _count: {
           select: {
@@ -243,7 +246,7 @@ class DialogService {
     user: Pick<UserDto, 'id' | 'email'>;
     partner: { id: number } | { username: string };
     messagesLimit?: number;
-  }): Promise<{ dialog: DialogDto; messages: Message[] }> {
+  }): Promise<{ dialog: DialogDto; messages: MessageDto[] }> {
     let dialogData;
     try {
       dialogData = await dialogService.get({

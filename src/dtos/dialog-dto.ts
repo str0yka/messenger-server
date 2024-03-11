@@ -4,6 +4,6 @@ export const DialogDto = ({
   unreadedMessagesCount,
 }: {
   dialog: Dialog & { user: UserDto; partner: UserDto };
-  lastMessage: Message | null;
+  lastMessage: MessageDto | null;
   unreadedMessagesCount: number;
 }): DialogDto => ({ ...dialog, lastMessage, unreadedMessagesCount });

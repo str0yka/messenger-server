@@ -81,12 +81,15 @@ model Chat {
 }
 
 model Message {
-  id        Int      @id @default(autoincrement())
-  message   String   @db.Text
-  read      Boolean  @default(false)
-  dialogs   Dialog[]
-  user      User     @relation(fields: [userId], references: [id])
-  userId    Int
-  updatedAt DateTime @updatedAt
-  createdAt DateTime @default(now())
+  id             Int       @id @default(autoincrement())
+  message        String    @db.Text
+  read           Boolean   @default(false)
+  dialogs        Dialog[]
+  user           User      @relation(fields: [userId], references: [id])
+  userId         Int
+  replyMessage   Message?  @relation("replies", fields: [replyMessageId], references: [id])
+  replyMessageId Int?
+  replies        Message[] @relation("replies")
+  updatedAt      DateTime  @updatedAt
+  createdAt      DateTime  @default(now())
 }
