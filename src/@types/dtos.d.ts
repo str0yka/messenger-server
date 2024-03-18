@@ -7,4 +7,6 @@ type DialogDto = Dialog & {
   unreadedMessagesCount: number;
 };
 
-type MessageDto = Message & { replies: Message[] };
+type MessageDto = Message & { user: UserDto } & {
+  replyMessage: (Message & { user: UserDto }) | null;
+};

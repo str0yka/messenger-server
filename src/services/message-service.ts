@@ -1,4 +1,5 @@
 import { prisma } from '../prisma';
+import { PRISMA_SELECT } from '../utils/constants';
 
 class MessageService {
   async send({
@@ -35,9 +36,7 @@ class MessageService {
           })),
         },
       },
-      include: {
-        replies: true,
-      },
+      select: PRISMA_SELECT.MESSAGE,
     });
 
     return messageData;
@@ -58,9 +57,7 @@ class MessageService {
         where: {
           id: messageId,
         },
-        include: {
-          replies: true,
-        },
+        select: PRISMA_SELECT.MESSAGE,
       });
     } else {
       messageData = await prisma.message.update({
@@ -74,9 +71,7 @@ class MessageService {
             },
           },
         },
-        include: {
-          replies: true,
-        },
+        select: PRISMA_SELECT.MESSAGE,
       });
     }
 
@@ -91,9 +86,7 @@ class MessageService {
       data: {
         read: true,
       },
-      include: {
-        replies: true,
-      },
+      select: PRISMA_SELECT.MESSAGE,
     });
   }
 
@@ -118,8 +111,7 @@ class MessageService {
         id: dialogId,
       },
       select: {
-        messages: { include: { replies: true } },
-        ...(filter && { messages: { ...filter, include: { replies: true } } }),
+        messages: { ...filter, select: PRISMA_SELECT.MESSAGE },
       },
     });
 
@@ -128,12 +120,12 @@ class MessageService {
 
   async getByDate({
     dialogId,
-    take,
+    take = 40,
     timestamp,
   }: {
     dialogId: number;
     timestamp: number;
-    take: number;
+    take?: number;
   }): Promise<{ messages: MessageDto[]; firstFoundMessage?: MessageDto }> {
     const date = new Date(timestamp);
 
@@ -152,7 +144,7 @@ class MessageService {
           orderBy: {
             createdAt: 'asc',
           },
-          include: { replies: true },
+          select: PRISMA_SELECT.MESSAGE,
         },
       },
     });
@@ -172,7 +164,7 @@ class MessageService {
           orderBy: {
             createdAt: 'desc',
           },
-          include: { replies: true },
+          select: PRISMA_SELECT.MESSAGE,
         },
       },
     });
@@ -201,7 +193,7 @@ class MessageService {
           not: userId,
         },
       },
-      include: { replies: true },
+      select: PRISMA_SELECT.MESSAGE,
     });
   }
 
@@ -213,7 +205,7 @@ class MessageService {
     dialogId: number;
     messageId: number;
     limit?: number;
-  }): Promise<MessageDto[]> {
+  }): Promise<{ target?: MessageDto; messages: MessageDto[] }> {
     let messagesData = await this.get({
       dialogId,
       filter: {
@@ -222,6 +214,8 @@ class MessageService {
         take: -limit / 2,
       },
     });
+
+    const target = messagesData.at(-1);
 
     if (messagesData.length < limit) {
       const otherMessagesData = await this.get({
@@ -237,7 +231,7 @@ class MessageService {
       messagesData = [...messagesData, ...otherMessagesData];
     }
 
-    return messagesData;
+    return { target, messages: messagesData };
   }
 }
 

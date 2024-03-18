@@ -92,9 +92,20 @@ export const messageHandler = (io: IO.Server, socket: IO.Socket) => {
       timestamp,
     });
 
-    io.to(`user-${socket.data.user.id}`).emit(`SERVER:JUMP_TO_DATE_RESPONSE`, {
+    socket.emit('SERVER:JUMP_TO_DATE_RESPONSE', {
       messages,
       firstFoundMessage,
     });
+  });
+
+  socket.on('CLIENT:JUMP_TO_MESSAGE', async ({ messageId, take }) => {
+    if (!socket.data.dialog) return;
+    const { messages, target } = await messageService.getByMessage({
+      dialogId: socket.data.dialog.id,
+      messageId,
+      limit: take,
+    });
+
+    socket.emit('SERVER:JUMP_TO_MESSAGE_RESPONSE', { messages, target });
   });
 };

@@ -12,6 +12,10 @@ interface ServerToClientEvents {
     messages: MessageDto[];
     firstFoundMessage?: MessageDto;
   }) => void;
+  'SERVER:JUMP_TO_MESSAGE_RESPONSE': (params: {
+    messages: MessageDto[];
+    target?: MessageDto;
+  }) => void;
   'SERVER:MESSAGES_PUT': (params: { messages: MessageDto[] }) => void;
   'SERVER:MESSAGES_PATCH': (params: { messages: MessageDto[] }) => void;
 }
@@ -41,7 +45,8 @@ interface ClientToServerEvents {
     };
     method?: 'PUT' | 'PATCH';
   }) => void;
-  'CLIENT:JUMP_TO_DATE': (params: { timestamp: number; take: number }) => void;
+  'CLIENT:JUMP_TO_DATE': (params: { timestamp: number; take?: number }) => void;
+  'CLIENT:JUMP_TO_MESSAGE': (params: { messageId: number; take?: number }) => void;
   'CLIENT:UPDATE_DIALOG_STATUS': (params: { status: DialogDto['status'] }) => void;
 }
 

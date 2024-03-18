@@ -51,7 +51,7 @@ class DialogService {
             createdAt: 'desc',
           },
           take: 1,
-          include: { replies: true },
+          select: PRISMA_SELECT.MESSAGE,
         },
       },
     });
@@ -90,7 +90,7 @@ class DialogService {
             createdAt: 'desc',
           },
           take: 1,
-          include: { replies: true },
+          select: PRISMA_SELECT.MESSAGE,
         },
         _count: {
           select: {
@@ -206,7 +206,7 @@ class DialogService {
             createdAt: 'desc',
           },
           take: 1,
-          include: { replies: true },
+          select: PRISMA_SELECT.MESSAGE,
         },
         _count: {
           select: {
@@ -267,11 +267,12 @@ class DialogService {
 
     let messagesData;
     if (firstUnreadMessageData) {
-      messagesData = await messageService.getByMessage({
+      const { messages } = await messageService.getByMessage({
         dialogId: dialogData.id,
         messageId: firstUnreadMessageData.id,
         limit: messagesLimit,
       });
+      messagesData = messages;
     } else {
       messagesData = await messageService.get({
         dialogId: dialogData.id,

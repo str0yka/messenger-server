@@ -11,4 +11,26 @@ export const PRISMA_SELECT = {
     username: true,
     status: true,
   },
+  MESSAGE: {
+    id: true,
+    message: true,
+    read: true,
+    replyMessage: {
+      select: {
+        id: true,
+        message: true,
+        read: true,
+        replyMessageId: true,
+        user: true,
+        userId: true,
+        createdAt: true,
+        updatedAt: true,
+      },
+    },
+    replyMessageId: true,
+    user: true,
+    userId: true,
+    createdAt: true,
+    updatedAt: true,
+  },
 };
