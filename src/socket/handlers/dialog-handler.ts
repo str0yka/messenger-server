@@ -1,3 +1,4 @@
+import { prisma } from '../../prisma';
 import { dialogService } from '../../services';
 
 export const dialogHandler = (io: IO.Server, socket: IO.Socket) => {
@@ -49,6 +50,22 @@ export const dialogHandler = (io: IO.Server, socket: IO.Socket) => {
     await dialogService.update({
       userId: socket.data.dialog.partnerId,
       dialog: { id: partnerDialogData.id, status },
+    });
+
+    io.to(`chat-${partnerDialogData.chatId}`).emit('SERVER:DIALOG_NEED_TO_UPDATE');
+  });
+
+  socket.on('CLIENT:PIN_MESSAGE', async ({ messageId }) => {
+    if (!socket.data.dialog) return;
+
+    const partnerDialogData = await dialogService.get({
+      userId: socket.data.dialog.partnerId,
+      partnerId: socket.data.user.id,
+    });
+
+    await prisma.dialog.updateMany({
+      where: { OR: [{ id: socket.data.dialog.id }, { id: partnerDialogData.id }] },
+      data: { pinnedMessageId: messageId },
     });
 
     io.to(`chat-${partnerDialogData.chatId}`).emit('SERVER:DIALOG_NEED_TO_UPDATE');

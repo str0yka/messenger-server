@@ -51,18 +51,20 @@ model Token {
 }
 
 model Dialog {
-  id        Int          @id @default(autoincrement())
-  title     String
-  status    DialogStatus @default(NONE)
-  user      User         @relation("UserInDialogs", fields: [userId], references: [id])
-  userId    Int
-  partner   User         @relation("PartnerInDialogs", fields: [partnerId], references: [id])
-  partnerId Int
-  messages  Message[]
-  chat      Chat         @relation(fields: [chatId], references: [id])
-  chatId    Int
-  updatedAt DateTime     @updatedAt
-  createdAt DateTime     @default(now())
+  id              Int          @id @default(autoincrement())
+  title           String
+  status          DialogStatus @default(NONE)
+  pinnedMessage   Message?     @relation("pinned", fields: [pinnedMessageId], references: [id])
+  pinnedMessageId Int?
+  user            User         @relation("UserInDialogs", fields: [userId], references: [id])
+  userId          Int
+  partner         User         @relation("PartnerInDialogs", fields: [partnerId], references: [id])
+  partnerId       Int
+  messages        Message[]
+  chat            Chat         @relation(fields: [chatId], references: [id])
+  chatId          Int
+  updatedAt       DateTime     @updatedAt
+  createdAt       DateTime     @default(now())
 
   @@unique([userId, partnerId])
 }
@@ -87,6 +89,7 @@ model Message {
   dialogs        Dialog[]
   user           User      @relation(fields: [userId], references: [id])
   userId         Int
+  pinnedIn       Dialog[]  @relation("pinned")
   replyMessage   Message?  @relation("replies", fields: [replyMessageId], references: [id])
   replyMessageId Int?
   replies        Message[] @relation("replies")

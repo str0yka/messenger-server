@@ -5,6 +5,7 @@ type DialogDto = Dialog & {
   partner: UserDto;
   lastMessage: MessageDto | null;
   unreadedMessagesCount: number;
+  pinnedMessage: MessageDto | null;
 };
 
 type MessageDto = Message & { user: UserDto } & {

@@ -34,6 +34,9 @@ class DialogService {
         partner: {
           select: PRISMA_SELECT.USER,
         },
+        pinnedMessage: {
+          select: PRISMA_SELECT.MESSAGE,
+        },
         _count: {
           select: {
             messages: {
@@ -84,6 +87,9 @@ class DialogService {
         },
         partner: {
           select: PRISMA_SELECT.USER,
+        },
+        pinnedMessage: {
+          select: PRISMA_SELECT.MESSAGE,
         },
         messages: {
           orderBy: {
@@ -200,6 +206,9 @@ class DialogService {
         },
         partner: {
           select: PRISMA_SELECT.USER,
+        },
+        pinnedMessage: {
+          select: PRISMA_SELECT.MESSAGE,
         },
         messages: {
           orderBy: {
