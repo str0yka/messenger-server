@@ -57,7 +57,7 @@ class MessageService {
         where: {
           id: messageId,
         },
-        select: PRISMA_SELECT.MESSAGE,
+        select: { ...PRISMA_SELECT.MESSAGE, pinnedIn: true },
       });
     } else {
       messageData = await prisma.message.update({
@@ -71,7 +71,7 @@ class MessageService {
             },
           },
         },
-        select: PRISMA_SELECT.MESSAGE,
+        select: { ...PRISMA_SELECT.MESSAGE, pinnedIn: true },
       });
     }
 

@@ -41,14 +41,18 @@ export const onConnection = async (io: IO.Server, socket: IO.Socket) => {
   ).emit('SERVER:DIALOGS_NEED_TO_UPDATE');
 
   socket.on('disconnect', async () => {
-    await userService.update({ id: user.id, status: 'OFFLINE' });
-    const usersWithWhomThereIsADialog = await userService.getAllUsersWithWhomThereIsADialog({
-      userId: user.id,
-    });
-    io.to(
-      usersWithWhomThereIsADialog.map(
-        (userWithWhomThereIsADialog) => `user-${userWithWhomThereIsADialog.id}`,
-      ),
-    ).emit('SERVER:DIALOGS_NEED_TO_UPDATE');
+    try {
+      await userService.update({ id: user.id, status: 'OFFLINE' });
+      const usersWithWhomThereIsADialog = await userService.getAllUsersWithWhomThereIsADialog({
+        userId: user.id,
+      });
+      io.to(
+        usersWithWhomThereIsADialog.map(
+          (userWithWhomThereIsADialog) => `user-${userWithWhomThereIsADialog.id}`,
+        ),
+      ).emit('SERVER:DIALOGS_NEED_TO_UPDATE');
+    } catch (e) {
+      console.log('disconnect', e);
+    }
   });
 };

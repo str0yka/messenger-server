@@ -18,6 +18,7 @@ interface ServerToClientEvents {
   }) => void;
   'SERVER:MESSAGES_PUT': (params: { messages: MessageDto[] }) => void;
   'SERVER:MESSAGES_PATCH': (params: { messages: MessageDto[] }) => void;
+  'SERVER:ERROR': (params: { event: keyof ClientToServerEvents; reason?: string }) => void;
 }
 
 interface ClientToServerEvents {
@@ -48,7 +49,7 @@ interface ClientToServerEvents {
   'CLIENT:JUMP_TO_DATE': (params: { timestamp: number; take?: number }) => void;
   'CLIENT:JUMP_TO_MESSAGE': (params: { messageId: number; take?: number }) => void;
   'CLIENT:UPDATE_DIALOG_STATUS': (params: { status: DialogDto['status'] }) => void;
-  'CLIENT:PIN_MESSAGE': (params: { messageId: number }) => void;
+  'CLIENT:PIN_MESSAGE': (params: { messageId: number | null }) => void;
 }
 
 interface InterServerEvents {}

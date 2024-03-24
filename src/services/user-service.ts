@@ -29,6 +29,20 @@ class UserService {
       user = await prisma.user.create({
         data: { email, name, password: hashPassword },
       });
+      await prisma.chat.create({
+        data: {
+          users: {
+            connect: { id: user.id },
+          },
+          dialogs: {
+            create: {
+              title: 'Saved Messages',
+              userId: user.id,
+              partnerId: user.id,
+            },
+          },
+        },
+      });
     }
 
     const verificationCode = verificationService.generateVerificationCode();

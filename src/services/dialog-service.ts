@@ -20,6 +20,7 @@ class DialogService {
       where: {
         userId: dialog.userId,
         ...('id' in dialog && { id: dialog.id }),
+        ...('partnerId' in dialog && { partnerId: dialog.partnerId }),
         ...('partner' in dialog && {
           partner: {
             ...('id' in dialog.partner && { id: dialog.partner.id }),
@@ -166,9 +167,6 @@ class DialogService {
             ],
           },
         },
-      },
-      include: {
-        dialogs: true,
       },
     });
 
