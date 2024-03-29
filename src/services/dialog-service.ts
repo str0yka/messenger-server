@@ -77,7 +77,11 @@ class DialogService {
     return prisma.dialog.findMany({ where: { chatId } });
   }
 
-  async getAll({ userId }: { userId: number }): Promise<DialogDto[]> {
+  async getAll({
+    userId,
+  }: {
+    userId: number;
+  }): Promise<{ pinned: DialogDto[]; unpinned: DialogDto[] }> {
     const dialogsData = await prisma.dialog.findMany({
       where: {
         userId,
@@ -114,7 +118,7 @@ class DialogService {
       },
     });
 
-    return dialogsData
+    const dialogs = dialogsData
       .map((dialogData) => {
         const {
           messages,
@@ -124,12 +128,22 @@ class DialogService {
 
         return DialogDto({ dialog, lastMessage: messages.at(0) ?? null, unreadedMessagesCount });
       })
-      .filter((dialogData) => !!dialogData.lastMessage)
-      .sort(
-        (firstDialog, secondDialog) =>
-          secondDialog.lastMessage!.createdAt.valueOf() -
-          firstDialog.lastMessage!.createdAt.valueOf(),
+      .filter(
+        (dialogData) => !!dialogData.lastMessage || dialogData.userId === dialogData.partnerId,
       );
+
+    return {
+      pinned: dialogs
+        .filter((dialog) => dialog.isPinned)
+        .sort((firstDialog, secondDialog) => firstDialog.pinnedOrder! - secondDialog.pinnedOrder!),
+      unpinned: dialogs
+        .filter((dialog) => !dialog.isPinned)
+        .sort(
+          (firstDialog, secondDialog) =>
+            secondDialog.lastMessage!.createdAt.valueOf() -
+            firstDialog.lastMessage!.createdAt.valueOf(),
+        ),
+    };
   }
 
   async create({
@@ -175,7 +189,7 @@ class DialogService {
 
   async search({
     userId,
-    search: { query, limit, page },
+    search: { query, limit = 50, page = 1 },
   }: {
     userId: number;
     search: Record<string, string | number | undefined>;
@@ -194,7 +208,11 @@ class DialogService {
     const searchData = await prisma.dialog.findMany({
       where: {
         userId,
-        title: { contains: query },
+        OR: [
+          { title: { contains: query } },
+          { partner: { username: { contains: query } } },
+          { partner: { email: { contains: query } } },
+        ],
       },
       take: limit,
       skip: (page - 1) * limit,

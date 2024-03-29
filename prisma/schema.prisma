@@ -52,6 +52,8 @@ model Token {
 
 model Dialog {
   id              Int          @id @default(autoincrement())
+  isPinned        Boolean      @default(false)
+  pinnedOrder     Int?
   title           String
   status          DialogStatus @default(NONE)
   pinnedMessage   Message?     @relation("pinned", fields: [pinnedMessageId], references: [id])

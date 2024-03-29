@@ -2,7 +2,9 @@ interface ServerToClientEvents {
   'SERVER:DIALOG_JOIN_RESPONSE': (params: { dialog: DialogDto; messages: MessageDto[] }) => void;
   'SERVER:MESSAGE_READ_RESPONSE': (params: { unreadedMessagesCount: number }) => void;
   'SERVER:MESSAGE_READ': (params: { message: MessageDto }) => void;
-  'SERVER:DIALOGS_PUT': (params: { dialogs: DialogDto[] }) => void;
+  'SERVER:DIALOGS_PUT': (params: {
+    dialogs: { pinned: DialogDto[]; unpinned: DialogDto[] };
+  }) => void;
   'SERVER:DIALOGS_NEED_TO_UPDATE': () => void;
   'SERVER:DIALOG_GET_RESPONSE': (params: { dialog: DialogDto }) => void;
   'SERVER:DIALOG_NEED_TO_UPDATE': () => void;
@@ -50,6 +52,7 @@ interface ClientToServerEvents {
   'CLIENT:JUMP_TO_MESSAGE': (params: { messageId: number; take?: number }) => void;
   'CLIENT:UPDATE_DIALOG_STATUS': (params: { status: DialogDto['status'] }) => void;
   'CLIENT:PIN_MESSAGE': (params: { messageId: number | null }) => void;
+  'CLIENT:PIN_DIALOG': (params: { dialogId: number; order: number }) => void;
 }
 
 interface InterServerEvents {}

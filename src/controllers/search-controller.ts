@@ -25,6 +25,7 @@ class SearchController {
       }
       return res.json(response);
     } catch (e) {
+      console.log(e);
       next(e);
     }
   }

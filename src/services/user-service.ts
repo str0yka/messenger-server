@@ -116,7 +116,7 @@ class UserService {
   }: {
     userId?: number;
     search: Record<string, string | number | undefined>;
-  }) {
+  }): Promise<UserDto[]> {
     if (!query) {
       return [];
     }
