@@ -138,11 +138,16 @@ class DialogService {
         .sort((firstDialog, secondDialog) => firstDialog.pinnedOrder! - secondDialog.pinnedOrder!),
       unpinned: dialogs
         .filter((dialog) => !dialog.isPinned)
-        .sort(
-          (firstDialog, secondDialog) =>
-            secondDialog.lastMessage!.createdAt.valueOf() -
-            firstDialog.lastMessage!.createdAt.valueOf(),
-        ),
+        .sort((firstDialog, secondDialog) => {
+          if (firstDialog.lastMessage && secondDialog.lastMessage) {
+            return (
+              secondDialog.lastMessage.createdAt.valueOf() -
+              firstDialog.lastMessage.createdAt.valueOf()
+            );
+          }
+          if (!firstDialog.lastMessage) return 1;
+          return -1;
+        }),
     };
   }
 
