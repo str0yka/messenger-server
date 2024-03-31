@@ -8,6 +8,15 @@ type DialogDto = Dialog & {
   pinnedMessage: MessageDto | null;
 };
 
-type MessageDto = Message & { user: UserDto } & {
-  replyMessage: (Message & { user: UserDto }) | null;
+type MessageDto = MessageItem & {
+  user: UserDto;
+  message: Message & {
+    user: UserDto;
+    replyMessage:
+      | (MessageItem & {
+          user: UserDto;
+          message: Message & { user: UserDto };
+        })
+      | null;
+  };
 };

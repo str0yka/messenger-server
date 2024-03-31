@@ -351,6 +351,53 @@ class DialogService {
       },
     });
   }
+
+  async unpin({ userId, dialogId }: { userId: number; dialogId: number }) {
+    const dialogData = await prisma.dialog.findUnique({ where: { id: dialogId } });
+
+    if (!dialogData || !dialogData.isPinned || typeof dialogData.pinnedOrder !== 'number') {
+      throw ApiError.BadRequest('Such a dialog does not exist or it is not pinned');
+    }
+
+    await prisma.dialog.updateMany({
+      where: {
+        userId: userId,
+        isPinned: true,
+        pinnedOrder: {
+          gt: dialogData.pinnedOrder,
+        },
+      },
+      data: {
+        pinnedOrder: {
+          decrement: 1,
+        },
+      },
+    });
+
+    await prisma.dialog.update({
+      where: { id: dialogId },
+      data: { isPinned: false, pinnedOrder: null },
+    });
+  }
+
+  async pin({ userId, dialogId }: { userId: number; dialogId: number }) {
+    await prisma.dialog.updateMany({
+      where: {
+        userId: userId,
+        isPinned: true,
+      },
+      data: {
+        pinnedOrder: {
+          increment: 1,
+        },
+      },
+    });
+
+    await prisma.dialog.update({
+      where: { id: dialogId },
+      data: { isPinned: true, pinnedOrder: 1 },
+    });
+  }
 }
 
 export const dialogService = new DialogService();

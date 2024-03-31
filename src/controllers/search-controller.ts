@@ -2,7 +2,7 @@ import { ApiError } from '../exceptions';
 import { dialogService, userService } from '../services';
 import { isSearchType } from '../utils/helpers';
 
-class SearchController {
+export class SearchController {
   async search(req: Ex.Request, res: Ex.Response, next: Ex.NextFunction) {
     try {
       const user = req.user!;
@@ -30,5 +30,3 @@ class SearchController {
     }
   }
 }
-
-export const searchController = new SearchController();

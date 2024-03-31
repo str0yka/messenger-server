@@ -1,6 +1,6 @@
 import { userService, verificationService } from '../services';
 
-class UserController {
+export class UserController {
   async registration(req: Ex.Request, res: Ex.Response<{ user: UserDto }>, next: Ex.NextFunction) {
     try {
       const { email, name, password } = req.body;
@@ -110,5 +110,3 @@ class UserController {
     }
   }
 }
-
-export const userController = new UserController();

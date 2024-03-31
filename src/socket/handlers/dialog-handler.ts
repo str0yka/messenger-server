@@ -122,84 +122,19 @@ export const dialogHandler = (io: IO.Server, socket: IO.Socket) => {
     }
   });
 
-  socket.on('CLIENT:DIALOG_PIN', async ({ dialogId }) => {
+  socket.on('CLIENT:DIALOG_DELETE', async ({ dialogId, deleteForEveryone = false }) => {
     try {
-      await prisma.dialog.updateMany({
-        where: {
-          userId: socket.data.user.id,
-          isPinned: true,
-        },
-        data: {
-          pinnedOrder: {
-            increment: 1,
-          },
-        },
-      });
+      const dialogData = await prisma.dialog.delete({ where: { id: dialogId } });
 
-      await prisma.dialog.update({
-        where: { id: dialogId },
-        data: { isPinned: true, pinnedOrder: 1 },
-      });
-
-      socket.emit('SERVER:DIALOGS_NEED_TO_UPDATE');
-    } catch (e) {
-      return socket.emit('SERVER:ERROR', {
-        event: 'CLIENT:DIALOG_PIN',
-        reason: 'Unexpected error',
-      });
-    }
-  });
-
-  socket.on('CLIENT:DIALOG_UNPIN', async ({ dialogId }) => {
-    try {
-      const dialogData = await prisma.dialog.findUnique({ where: { id: dialogId } });
-
-      if (!dialogData || !dialogData.isPinned || typeof dialogData.pinnedOrder !== 'number') {
-        return socket.emit('SERVER:ERROR', {
-          event: 'CLIENT:DIALOG_UNPIN',
-          reason: 'Such a dialog does not exist or it is not pinned',
-        });
+      if (deleteForEveryone) {
+        await prisma.dialog.deleteMany({ where: { chatId: dialogData.chatId } });
+        await prisma.chat.delete({ where: { id: dialogData.chatId } });
       }
 
-      await prisma.dialog.updateMany({
-        where: {
-          userId: socket.data.user.id,
-          isPinned: true,
-          pinnedOrder: {
-            gt: dialogData.pinnedOrder,
-          },
-        },
-        data: {
-          pinnedOrder: {
-            decrement: 1,
-          },
-        },
-      });
-
-      await prisma.dialog.update({
-        where: { id: dialogId },
-        data: { isPinned: false, pinnedOrder: null },
-      });
-
       socket.emit('SERVER:DIALOGS_NEED_TO_UPDATE');
     } catch (e) {
       return socket.emit('SERVER:ERROR', {
-        event: 'CLIENT:DIALOG_UNPIN',
-        reason: 'Unexpected error',
-      });
-    }
-  });
-
-  socket.on('CLIENT:DIALOG_CHANGE_PINNED_ORDER', async ({ dialogs }) => {
-    try {
-      await prisma.$transaction(
-        dialogs.map(({ dialogId, order }) =>
-          prisma.dialog.update({ where: { id: dialogId }, data: { pinnedOrder: order } }),
-        ),
-      );
-    } catch (e) {
-      return socket.emit('SERVER:ERROR', {
-        event: 'CLIENT:DIALOG_CHANGE_PINNED_ORDER',
+        event: 'CLIENT:DIALOG_DELETE',
         reason: 'Unexpected error',
       });
     }

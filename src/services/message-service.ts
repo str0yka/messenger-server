@@ -9,8 +9,9 @@ class MessageService {
   }: {
     userId: number;
     chatId: number;
-    message: Pick<MessageDto, 'message'> &
-      Partial<Pick<MessageDto, 'createdAt' | 'replyMessageId'>>;
+    message:
+      | { type: 'MESSAGE'; text: string; createdAt?: Date; replyMessageId?: number }
+      | { type: 'FORWARDED'; id: number };
   }): Promise<MessageDto> {
     const chatData = await prisma.chat.findUniqueOrThrow({
       where: {
@@ -26,20 +27,41 @@ class MessageService {
       },
     });
 
-    const messageData = await prisma.message.create({
-      data: {
-        ...message,
-        userId: userId,
-        dialogs: {
-          connect: chatData.dialogs.map((dialogData) => ({
-            id: dialogData.id,
-          })),
+    let messageItemData: MessageDto;
+    if (message.type === 'FORWARDED') {
+      messageItemData = await prisma.messageItem.create({
+        data: {
+          userId,
+          messageId: message.id,
+          type: 'FORWARDED',
         },
-      },
-      select: PRISMA_SELECT.MESSAGE,
-    });
+        select: PRISMA_SELECT.MESSAGE,
+      });
+    } else {
+      const messageData = await prisma.message.create({
+        data: {
+          text: message.text,
+          createdAt: message.createdAt,
+          replyMessageId: message.replyMessageId,
+          userId,
+        },
+      });
 
-    return messageData;
+      messageItemData = await prisma.messageItem.create({
+        data: {
+          type: 'MESSAGE',
+          createdAt: message.createdAt,
+          messageId: messageData.id,
+          userId,
+          dialogs: {
+            connect: chatData.dialogs.map((dialogData) => ({ id: dialogData.id })),
+          },
+        },
+        select: PRISMA_SELECT.MESSAGE,
+      });
+    }
+
+    return messageItemData;
   }
 
   async delete({
@@ -53,14 +75,14 @@ class MessageService {
   }): Promise<MessageDto> {
     let messageData;
     if (deleteForEveryone) {
-      messageData = await prisma.message.delete({
+      messageData = await prisma.messageItem.delete({
         where: {
           id: messageId,
         },
-        select: { ...PRISMA_SELECT.MESSAGE, pinnedIn: true },
+        select: PRISMA_SELECT.MESSAGE,
       });
     } else {
-      messageData = await prisma.message.update({
+      messageData = await prisma.messageItem.update({
         where: {
           id: messageId,
         },
@@ -71,7 +93,7 @@ class MessageService {
             },
           },
         },
-        select: { ...PRISMA_SELECT.MESSAGE, pinnedIn: true },
+        select: PRISMA_SELECT.MESSAGE,
       });
     }
 
@@ -79,7 +101,7 @@ class MessageService {
   }
 
   async read({ messageId }: { messageId: number }): Promise<MessageDto> {
-    return prisma.message.update({
+    return prisma.messageItem.update({
       where: {
         id: messageId,
       },
@@ -181,7 +203,7 @@ class MessageService {
     userId: number;
     dialogId: number;
   }): Promise<MessageDto | null> {
-    return prisma.message.findFirst({
+    return prisma.messageItem.findFirst({
       where: {
         dialogs: {
           some: {

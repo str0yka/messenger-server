@@ -70,8 +70,7 @@ CREATE TABLE `Chat` (
 -- CreateTable
 CREATE TABLE `Message` (
     `id` INTEGER NOT NULL AUTO_INCREMENT,
-    `message` TEXT NOT NULL,
-    `read` BOOLEAN NOT NULL DEFAULT false,
+    `text` TEXT NOT NULL,
     `userId` INTEGER NOT NULL,
     `replyMessageId` INTEGER NULL,
     `updatedAt` DATETIME(3) NOT NULL,
@@ -81,12 +80,25 @@ CREATE TABLE `Message` (
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 -- CreateTable
-CREATE TABLE `_DialogToMessage` (
+CREATE TABLE `MessageItem` (
+    `id` INTEGER NOT NULL AUTO_INCREMENT,
+    `read` BOOLEAN NOT NULL DEFAULT false,
+    `messageId` INTEGER NOT NULL,
+    `userId` INTEGER NOT NULL,
+    `type` ENUM('FORWARDED', 'MESSAGE') NOT NULL,
+    `updatedAt` DATETIME(3) NOT NULL,
+    `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+
+    PRIMARY KEY (`id`)
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+-- CreateTable
+CREATE TABLE `_DialogToMessageItem` (
     `A` INTEGER NOT NULL,
     `B` INTEGER NOT NULL,
 
-    UNIQUE INDEX `_DialogToMessage_AB_unique`(`A`, `B`),
-    INDEX `_DialogToMessage_B_index`(`B`)
+    UNIQUE INDEX `_DialogToMessageItem_AB_unique`(`A`, `B`),
+    INDEX `_DialogToMessageItem_B_index`(`B`)
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 -- CreateTable
@@ -105,7 +117,7 @@ ALTER TABLE `Verification` ADD CONSTRAINT `Verification_userId_fkey` FOREIGN KEY
 ALTER TABLE `Token` ADD CONSTRAINT `Token_userId_fkey` FOREIGN KEY (`userId`) REFERENCES `User`(`id`) ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE `Dialog` ADD CONSTRAINT `Dialog_pinnedMessageId_fkey` FOREIGN KEY (`pinnedMessageId`) REFERENCES `Message`(`id`) ON DELETE SET NULL ON UPDATE CASCADE;
+ALTER TABLE `Dialog` ADD CONSTRAINT `Dialog_pinnedMessageId_fkey` FOREIGN KEY (`pinnedMessageId`) REFERENCES `MessageItem`(`id`) ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE `Dialog` ADD CONSTRAINT `Dialog_userId_fkey` FOREIGN KEY (`userId`) REFERENCES `User`(`id`) ON DELETE RESTRICT ON UPDATE CASCADE;
@@ -120,13 +132,19 @@ ALTER TABLE `Dialog` ADD CONSTRAINT `Dialog_chatId_fkey` FOREIGN KEY (`chatId`) 
 ALTER TABLE `Message` ADD CONSTRAINT `Message_userId_fkey` FOREIGN KEY (`userId`) REFERENCES `User`(`id`) ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE `Message` ADD CONSTRAINT `Message_replyMessageId_fkey` FOREIGN KEY (`replyMessageId`) REFERENCES `Message`(`id`) ON DELETE SET NULL ON UPDATE CASCADE;
+ALTER TABLE `Message` ADD CONSTRAINT `Message_replyMessageId_fkey` FOREIGN KEY (`replyMessageId`) REFERENCES `MessageItem`(`id`) ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE `_DialogToMessage` ADD CONSTRAINT `_DialogToMessage_A_fkey` FOREIGN KEY (`A`) REFERENCES `Dialog`(`id`) ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE `MessageItem` ADD CONSTRAINT `MessageItem_messageId_fkey` FOREIGN KEY (`messageId`) REFERENCES `Message`(`id`) ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE `_DialogToMessage` ADD CONSTRAINT `_DialogToMessage_B_fkey` FOREIGN KEY (`B`) REFERENCES `Message`(`id`) ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE `MessageItem` ADD CONSTRAINT `MessageItem_userId_fkey` FOREIGN KEY (`userId`) REFERENCES `User`(`id`) ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE `_DialogToMessageItem` ADD CONSTRAINT `_DialogToMessageItem_A_fkey` FOREIGN KEY (`A`) REFERENCES `Dialog`(`id`) ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE `_DialogToMessageItem` ADD CONSTRAINT `_DialogToMessageItem_B_fkey` FOREIGN KEY (`B`) REFERENCES `MessageItem`(`id`) ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE `_ChatToUser` ADD CONSTRAINT `_ChatToUser_A_fkey` FOREIGN KEY (`A`) REFERENCES `Chat`(`id`) ON DELETE CASCADE ON UPDATE CASCADE;

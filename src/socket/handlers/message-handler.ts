@@ -44,13 +44,17 @@ export const messageHandler = (io: IO.Server, socket: IO.Socket) => {
       }
 
       const messageData = await messageService.send({
-        message: {
-          message: message.message,
-          createdAt:
-            typeof message.createdAt === 'number' ? new Date(message.createdAt) : undefined,
-          replyMessageId:
-            typeof message.replyMessageId === 'number' ? message.replyMessageId : undefined,
-        },
+        message:
+          message.type === 'FORWARDED'
+            ? { type: 'FORWARDED', id: message.id }
+            : {
+                type: 'MESSAGE',
+                text: message.text,
+                replyMessageId: message.replyMessageId,
+                ...(typeof message.createdAt === 'number' && {
+                  createdAt: new Date(message.createdAt),
+                }),
+              },
         userId: socket.data.user.id,
         chatId: socket.data.dialog.chatId,
       });

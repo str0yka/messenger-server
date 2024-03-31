@@ -4,3 +4,5 @@ declare type Verification = import('@prisma/client').Verification;
 declare type Dialog = import('@prisma/client').Dialog;
 declare type Chat = import('@prisma/client').Chat;
 declare type Message = import('@prisma/client').Message;
+declare type MessageItem = import('@prisma/client').MessageItem;
+declare type MessageType = import('@prisma/client').MessageType;

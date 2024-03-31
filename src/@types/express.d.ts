@@ -1,6 +1,8 @@
 namespace Ex {
   type Request<
-    Params = ParamsDictionary,
+    Params = {
+      [key: string]: string;
+    },
     ResBody = any,
     ReqBody = any,
     ReqQuery = qs.ParsedQs,
