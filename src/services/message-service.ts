@@ -34,6 +34,9 @@ class MessageService {
           userId,
           messageId: message.id,
           type: 'FORWARDED',
+          dialogs: {
+            connect: chatData.dialogs.map((dialogData) => ({ id: dialogData.id })),
+          },
         },
         select: PRISMA_SELECT.MESSAGE,
       });

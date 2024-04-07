@@ -69,4 +69,21 @@ export class DialogController {
       next(e);
     }
   }
+
+  async getAll(
+    req: Ex.Request,
+    res: Ex.Response<{ dialogs: { pinned: DialogDto[]; unpinned: DialogDto[] } }>,
+    next: Ex.NextFunction,
+  ) {
+    try {
+      const user = req.user!;
+
+      const dialogs = await dialogService.getAll({ userId: user.id });
+
+      return res.json({ dialogs });
+    } catch (e) {
+      console.log(e);
+      next(e);
+    }
+  }
 }

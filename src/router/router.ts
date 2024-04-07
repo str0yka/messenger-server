@@ -1,6 +1,6 @@
 import { Router } from 'express';
 
-import { SearchController, UserController, DialogController } from '../controllers';
+import { SearchController, UserController, DialogController, FileController } from '../controllers';
 import { authMiddlware } from '../middlewares';
 
 export const createRouter = (io: IO.Server) => {
@@ -9,6 +9,7 @@ export const createRouter = (io: IO.Server) => {
   const dialogController = new DialogController(io);
   const userController = new UserController();
   const searchController = new SearchController();
+  const fileController = new FileController();
 
   router.post('/registration', userController.registration);
   router.post('/verify/:id', userController.verify);
@@ -18,9 +19,12 @@ export const createRouter = (io: IO.Server) => {
   router.get('/refresh', userController.refresh);
   router.get('/search', authMiddlware, searchController.search);
 
-  router.post('/dialog/reorder', authMiddlware, dialogController.reorder);
-  router.post('/dialog/pin', authMiddlware, dialogController.pin);
-  router.post('/dialog/unpin', authMiddlware, dialogController.unpin);
+  router.get('/dialogs', authMiddlware, dialogController.getAll);
+  router.post('/dialogs/reorder', authMiddlware, dialogController.reorder);
+  router.post('/dialogs/pin', authMiddlware, dialogController.pin);
+  router.post('/dialogs/unpin', authMiddlware, dialogController.unpin);
+
+  router.post('/upload', fileController.upload);
 
   return router;
 };
