@@ -39,6 +39,7 @@ export const PRISMA_SELECT = {
       select: {
         id: true,
         text: true,
+        image: true,
         userId: true,
         replyMessageId: true,
         updatedAt: true,
@@ -86,6 +87,7 @@ export const PRISMA_SELECT = {
               select: {
                 id: true,
                 text: true,
+                image: true,
                 userId: true,
                 replyMessageId: true,
                 updatedAt: true,

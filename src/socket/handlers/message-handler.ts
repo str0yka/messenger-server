@@ -51,6 +51,7 @@ export const messageHandler = (io: IO.Server, socket: IO.Socket) => {
                 type: 'MESSAGE',
                 text: message.text,
                 replyMessageId: message.replyMessageId,
+                image: message.image,
                 ...(typeof message.createdAt === 'number' && {
                   createdAt: new Date(message.createdAt),
                 }),

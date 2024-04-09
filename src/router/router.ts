@@ -24,7 +24,7 @@ export const createRouter = (io: IO.Server) => {
   router.post('/dialogs/pin', authMiddlware, dialogController.pin);
   router.post('/dialogs/unpin', authMiddlware, dialogController.unpin);
 
-  router.post('/upload', fileController.upload);
+  router.post('/upload', authMiddlware, fileController.upload);
 
   return router;
 };

@@ -77,6 +77,7 @@ model Chat {
 model Message {
   id             Int           @id @default(autoincrement())
   text           String        @db.Text
+  image          String?
   messageItems   MessageItem[]
   user           User          @relation(fields: [userId], references: [id])
   userId         Int

@@ -10,7 +10,13 @@ class MessageService {
     userId: number;
     chatId: number;
     message:
-      | { type: 'MESSAGE'; text: string; createdAt?: Date; replyMessageId?: number }
+      | {
+          type: 'MESSAGE';
+          text: string;
+          createdAt?: Date;
+          replyMessageId?: number;
+          image?: string | null;
+        }
       | { type: 'FORWARDED'; id: number };
   }): Promise<MessageDto> {
     const chatData = await prisma.chat.findUniqueOrThrow({
@@ -46,6 +52,7 @@ class MessageService {
           text: message.text,
           createdAt: message.createdAt,
           replyMessageId: message.replyMessageId,
+          image: message.image,
           userId,
         },
       });
