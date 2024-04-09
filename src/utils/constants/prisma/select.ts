@@ -10,6 +10,7 @@ export const PRISMA_SELECT = {
     updatedAt: true,
     username: true,
     status: true,
+    avatar: true,
   },
   MESSAGE: {
     id: true,
@@ -31,6 +32,7 @@ export const PRISMA_SELECT = {
         updatedAt: true,
         username: true,
         status: true,
+        avatar: true,
       },
     },
     message: {
@@ -53,6 +55,7 @@ export const PRISMA_SELECT = {
             updatedAt: true,
             username: true,
             status: true,
+            avatar: true,
           },
         },
         replyMessage: {
@@ -76,6 +79,7 @@ export const PRISMA_SELECT = {
                 updatedAt: true,
                 username: true,
                 status: true,
+                avatar: true,
               },
             },
             message: {
@@ -98,6 +102,7 @@ export const PRISMA_SELECT = {
                     updatedAt: true,
                     username: true,
                     status: true,
+                    avatar: true,
                   },
                 },
               },

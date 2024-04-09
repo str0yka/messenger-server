@@ -1,3 +1,8 @@
+import path from 'path';
+
+import type { UploadedFile } from 'express-fileupload';
+import { v4 } from 'uuid';
+
 import { userService, verificationService } from '../services';
 
 export class UserController {
@@ -101,8 +106,15 @@ export class UserController {
       const user = req.user!;
 
       const updateFields = req.body;
+      const image = req.files?.image;
 
-      const userData = await userService.update({ id: user.id, ...updateFields });
+      let avatar: string | null = null;
+      if (image) {
+        avatar = v4() + '.jpg';
+        (image as UploadedFile).mv(path.resolve(__dirname, '..', 'images', avatar));
+      }
+
+      const userData = await userService.update({ id: user.id, avatar, ...updateFields });
 
       return res.json({ user: userData });
     } catch (e) {
