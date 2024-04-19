@@ -12,10 +12,10 @@ class MessageService {
     message:
       | {
           type: 'MESSAGE';
-          text: string;
+          text: string | null;
           createdAt?: Date;
           replyMessageId?: number;
-          image?: string | null;
+          image: string | null;
         }
       | { type: 'FORWARDED'; id: number };
   }): Promise<MessageDto> {

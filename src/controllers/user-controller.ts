@@ -108,13 +108,20 @@ export class UserController {
       const updateFields = req.body;
       const image = req.files?.image;
 
+      console.log('1@', updateFields);
+      console.log('2@', image);
+
       let avatar: string | null = null;
       if (image) {
         avatar = v4() + '.jpg';
         (image as UploadedFile).mv(path.resolve(__dirname, '..', 'images', avatar));
       }
 
-      const userData = await userService.update({ id: user.id, avatar, ...updateFields });
+      const userData = await userService.update({
+        id: user.id,
+        ...updateFields,
+        ...(avatar && { avatar }),
+      });
 
       return res.json({ user: userData });
     } catch (e) {
