@@ -61,6 +61,9 @@ interface ClientToServerEvents {
   'CLIENT:DIALOG_UPDATE_STATUS': (params: { status: DialogDto['status'] }) => void;
   'CLIENT:MESSAGE_PIN': (params: { messageId: number | null }) => void;
   'CLIENT:DIALOG_DELETE': (params: { dialogId: number; deleteForEveryone?: boolean }) => void;
+  'CLIENT:DIALOG_LEAVE': () => void;
+  'CLIENT:DIALOG_BLOCK': (params: { partnerId: number }) => void;
+  'CLIENT:DIALOG_UNBLOCK': (params: { partnerId: number }) => void;
 }
 
 interface InterServerEvents {}

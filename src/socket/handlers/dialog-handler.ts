@@ -30,6 +30,10 @@ export const dialogHandler = (io: IO.Server, socket: IO.Socket) => {
     }
   });
 
+  socket.on('CLIENT:DIALOG_LEAVE', () => {
+    socket.leave(`chat-${socket.data.dialog?.chatId}`);
+  });
+
   socket.on('CLIENT:DIALOG_GET', async () => {
     try {
       if (!socket.data.dialog) {
@@ -129,12 +133,51 @@ export const dialogHandler = (io: IO.Server, socket: IO.Socket) => {
       if (deleteForEveryone) {
         await prisma.dialog.deleteMany({ where: { chatId: dialogData.chatId } });
         await prisma.chat.delete({ where: { id: dialogData.chatId } });
+        return io
+          .to([`user-${dialogData.partnerId}`, `user-${dialogData.userId}`])
+          .emit('SERVER:DIALOGS_NEED_TO_UPDATE');
       }
 
       socket.emit('SERVER:DIALOGS_NEED_TO_UPDATE');
     } catch (e) {
       return socket.emit('SERVER:ERROR', {
         event: 'CLIENT:DIALOG_DELETE',
+        reason: 'Unexpected error',
+      });
+    }
+  });
+
+  socket.on('CLIENT:DIALOG_BLOCK', async ({ partnerId }) => {
+    try {
+      const dialogData = await dialogService.get({ partnerId, userId: socket.data.user.id });
+
+      const chatData = await prisma.chat.update({
+        where: { id: dialogData.chatId },
+        data: { blocked: { connect: { id: partnerId } } },
+      });
+
+      io.to(`chat-${chatData.id}`).emit('SERVER:DIALOG_NEED_TO_UPDATE');
+    } catch (e) {
+      return socket.emit('SERVER:ERROR', {
+        event: 'CLIENT:DIALOG_BLOCK',
+        reason: 'Unexpected error',
+      });
+    }
+  });
+
+  socket.on('CLIENT:DIALOG_UNBLOCK', async ({ partnerId }) => {
+    try {
+      const dialogData = await dialogService.get({ partnerId, userId: socket.data.user.id });
+
+      const chatData = await prisma.chat.update({
+        where: { id: dialogData.chatId },
+        data: { blocked: { disconnect: { id: partnerId } } },
+      });
+
+      io.to(`chat-${chatData.id}`).emit('SERVER:DIALOG_NEED_TO_UPDATE');
+    } catch (e) {
+      return socket.emit('SERVER:ERROR', {
+        event: 'CLIENT:DIALOG_UNBLOCK',
         reason: 'Unexpected error',
       });
     }

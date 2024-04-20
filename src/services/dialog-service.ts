@@ -60,6 +60,11 @@ class DialogService {
       },
     });
 
+    const chatData = await prisma.chat.findUniqueOrThrow({
+      where: { id: dialogData.chatId },
+      select: { blocked: true },
+    });
+
     const {
       messages,
       _count: { messages: unreadedMessagesCount },
@@ -70,6 +75,7 @@ class DialogService {
       dialog: otherDialogData,
       lastMessage: messages.at(0) ?? null,
       unreadedMessagesCount,
+      blocked: chatData.blocked,
     });
   }
 
@@ -82,34 +88,48 @@ class DialogService {
   }: {
     userId: number;
   }): Promise<{ pinned: DialogDto[]; unpinned: DialogDto[] }> {
-    const dialogsData = await prisma.dialog.findMany({
+    const chatsData = await prisma.chat.findMany({
       where: {
-        userId,
-      },
-      include: {
-        user: {
-          select: PRISMA_SELECT.USER,
-        },
-        partner: {
-          select: PRISMA_SELECT.USER,
-        },
-        pinnedMessage: {
-          select: PRISMA_SELECT.MESSAGE,
-        },
-        messages: {
-          orderBy: {
-            createdAt: 'desc',
+        dialogs: {
+          some: {
+            userId,
           },
-          take: 1,
-          select: PRISMA_SELECT.MESSAGE,
         },
-        _count: {
-          select: {
+      },
+      select: {
+        blocked: {
+          select: PRISMA_SELECT.USER,
+        },
+        dialogs: {
+          where: {
+            userId,
+          },
+          include: {
+            user: {
+              select: PRISMA_SELECT.USER,
+            },
+            partner: {
+              select: PRISMA_SELECT.USER,
+            },
+            pinnedMessage: {
+              select: PRISMA_SELECT.MESSAGE,
+            },
             messages: {
-              where: {
-                read: false,
-                userId: {
-                  not: userId,
+              orderBy: {
+                createdAt: 'desc',
+              },
+              take: 1,
+              select: PRISMA_SELECT.MESSAGE,
+            },
+            _count: {
+              select: {
+                messages: {
+                  where: {
+                    read: false,
+                    userId: {
+                      not: userId,
+                    },
+                  },
                 },
               },
             },
@@ -118,15 +138,23 @@ class DialogService {
       },
     });
 
-    const dialogs = dialogsData
-      .map((dialogData) => {
+    const dialogs = chatsData
+      .map((chatData) => {
+        const { blocked, dialogs } = chatData;
+        const dialogData = dialogs[0];
+
         const {
           messages,
           _count: { messages: unreadedMessagesCount },
           ...dialog
         } = dialogData;
 
-        return DialogDto({ dialog, lastMessage: messages.at(0) ?? null, unreadedMessagesCount });
+        return DialogDto({
+          dialog,
+          lastMessage: messages.at(0) ?? null,
+          unreadedMessagesCount,
+          blocked,
+        });
       })
       .filter(
         (dialogData) => !!dialogData.lastMessage || dialogData.userId === dialogData.partnerId,
@@ -165,29 +193,92 @@ class DialogService {
       throw ApiError.BadRequest(`User isn't exist`);
     }
 
-    await prisma.chat.create({
-      data: {
-        users: {
-          connect: [{ id: userData.id }, { id: partnerData.id }],
-        },
-        dialogs: {
-          createMany: {
-            data: [
-              {
-                title: partnerData.name,
-                userId: userData.id,
-                partnerId: partnerData.id,
+    const chatData = await prisma.chat.findFirst({
+      where: { users: { some: { AND: [{ id: userData.id }, { id: partnerData.id }] } } },
+      include: { dialogs: true },
+    });
+
+    if (
+      chatData &&
+      !!chatData.dialogs.find(
+        (dialog) => dialog.userId === userData.id && dialog.partnerId === partnerData.id,
+      )
+    ) {
+      throw ApiError.BadRequest('Dialog already exist');
+    }
+
+    if (userData.id === partnerData.id) {
+      if (!chatData) {
+        await prisma.chat.create({
+          data: {
+            users: {
+              connect: { id: user.id },
+            },
+            dialogs: {
+              create: {
+                title: 'Saved Messages',
+                userId: user.id,
+                partnerId: user.id,
               },
-              {
-                title: userData.name,
-                userId: partnerData.id,
-                partnerId: userData.id,
+            },
+          },
+        });
+      } else {
+        await prisma.chat.update({
+          where: { id: chatData.id },
+          data: {
+            dialogs: {
+              create: {
+                title: 'Saved Messages',
+                userId: user.id,
+                partnerId: user.id,
               },
-            ],
+            },
+          },
+        });
+      }
+
+      return this.get({ partnerId: partnerData.id, userId: userData.id });
+    }
+
+    if (chatData) {
+      await prisma.chat.update({
+        where: { id: chatData.id },
+        data: {
+          dialogs: {
+            create: {
+              title: partnerData.name,
+              userId: userData.id,
+              partnerId: partnerData.id,
+            },
           },
         },
-      },
-    });
+      });
+    } else {
+      await prisma.chat.create({
+        data: {
+          users: {
+            connect: [{ id: userData.id }, { id: partnerData.id }],
+          },
+          dialogs: {
+            createMany: {
+              data: [
+                {
+                  title: partnerData.name,
+                  userId: userData.id,
+                  partnerId: partnerData.id,
+                },
+                {
+                  title: userData.name,
+                  userId: partnerData.id,
+                  partnerId: userData.id,
+                },
+              ],
+            },
+          },
+        },
+      });
+    }
 
     return this.get({ userId: userData.id, partnerId: partnerData.id });
   }
@@ -210,41 +301,60 @@ class DialogService {
     limit = Number(limit);
     page = Number(page);
 
-    const searchData = await prisma.dialog.findMany({
+    const chatsData = await prisma.chat.findMany({
       where: {
-        userId,
-        OR: [
-          { title: { contains: query } },
-          { partner: { username: { contains: query } } },
-          { partner: { email: { contains: query } } },
-        ],
-      },
-      take: limit,
-      skip: (page - 1) * limit,
-      include: {
-        user: {
-          select: PRISMA_SELECT.USER,
-        },
-        partner: {
-          select: PRISMA_SELECT.USER,
-        },
-        pinnedMessage: {
-          select: PRISMA_SELECT.MESSAGE,
-        },
-        messages: {
-          orderBy: {
-            createdAt: 'desc',
+        dialogs: {
+          some: {
+            userId,
+            OR: [
+              { title: { contains: query } },
+              { partner: { username: { contains: query } } },
+              { partner: { email: { contains: query } } },
+            ],
           },
-          take: 1,
-          select: PRISMA_SELECT.MESSAGE,
         },
-        _count: {
-          select: {
+      },
+      select: {
+        blocked: {
+          select: PRISMA_SELECT.USER,
+        },
+        dialogs: {
+          where: {
+            userId,
+            OR: [
+              { title: { contains: query } },
+              { partner: { username: { contains: query } } },
+              { partner: { email: { contains: query } } },
+            ],
+          },
+          take: limit,
+          skip: (page - 1) * limit,
+          include: {
+            user: {
+              select: PRISMA_SELECT.USER,
+            },
+            partner: {
+              select: PRISMA_SELECT.USER,
+            },
+            pinnedMessage: {
+              select: PRISMA_SELECT.MESSAGE,
+            },
             messages: {
-              where: {
-                read: false,
-                userId: {
-                  not: userId,
+              orderBy: {
+                createdAt: 'desc',
+              },
+              take: 1,
+              select: PRISMA_SELECT.MESSAGE,
+            },
+            _count: {
+              select: {
+                messages: {
+                  where: {
+                    read: false,
+                    userId: {
+                      not: userId,
+                    },
+                  },
                 },
               },
             },
@@ -253,17 +363,21 @@ class DialogService {
       },
     });
 
-    return searchData.map((dialog) => {
+    return chatsData.map((chatData) => {
+      const { blocked, dialogs } = chatData;
+      const dialogData = dialogs[0];
+
       const {
         messages,
         _count: { messages: unreadedMessagesCount },
-        ...dialogData
-      } = dialog;
+        ...dialog
+      } = dialogData;
 
       return DialogDto({
-        dialog: dialogData,
+        dialog,
         lastMessage: messages.at(0) ?? null,
         unreadedMessagesCount,
+        blocked,
       });
     });
   }

@@ -6,6 +6,8 @@ type DialogDto = Dialog & {
   lastMessage: MessageDto | null;
   unreadedMessagesCount: number;
   pinnedMessage: MessageDto | null;
+  userBlocked: boolean;
+  partnerBlocked: boolean;
 };
 
 type MessageDto = MessageItem & {

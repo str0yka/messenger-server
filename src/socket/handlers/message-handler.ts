@@ -25,7 +25,9 @@ export const messageHandler = (io: IO.Server, socket: IO.Socket) => {
       io.to(`chat-${socket.data.dialog.chatId}`).emit('SERVER:MESSAGE_READ', {
         message: messageData,
       });
-      io.to(`chat-${socket.data.dialog.chatId}`).emit('SERVER:DIALOGS_NEED_TO_UPDATE');
+      io.to([`user-${socket.data.dialog.userId}`, `user-${socket.data.dialog.partnerId}`]).emit(
+        'SERVER:DIALOGS_NEED_TO_UPDATE',
+      );
     } catch (e) {
       return socket.emit('SERVER:ERROR', {
         event: 'CLIENT:MESSAGE_READ',
