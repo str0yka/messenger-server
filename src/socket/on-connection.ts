@@ -1,4 +1,4 @@
-import { userService } from '../services';
+import { dialogService, userService } from '../services';
 
 import { messageHandler, dialogHandler } from './handlers';
 
@@ -31,26 +31,36 @@ export const onConnection = async (io: IO.Server, socket: IO.Socket) => {
   dialogHandler(io, socket);
 
   await userService.update({ id: user.id, status: 'ONLINE' });
-  const usersWithWhomThereIsADialog = await userService.getAllUsersWithWhomThereIsADialog({
+  const dialogsInWhichTheUserIsAMember = await dialogService.getDialogsInWhichTheUserIsAMember({
     userId: user.id,
   });
   io.to(
-    usersWithWhomThereIsADialog.map(
-      (userWithWhomThereIsADialog) => `user-${userWithWhomThereIsADialog.id}`,
+    dialogsInWhichTheUserIsAMember.map(
+      (dialogInWhichTheUserIsAMember) => `user-${dialogInWhichTheUserIsAMember.userId}`,
     ),
   ).emit('SERVER:DIALOGS_NEED_TO_UPDATE');
+  io.to(
+    dialogsInWhichTheUserIsAMember.map(
+      (dialogInWhichTheUserIsAMember) => `chat-${dialogInWhichTheUserIsAMember.chatId}`,
+    ),
+  ).emit('SERVER:DIALOG_NEED_TO_UPDATE');
 
   socket.on('disconnect', async () => {
     try {
       await userService.update({ id: user.id, status: 'OFFLINE' });
-      const usersWithWhomThereIsADialog = await userService.getAllUsersWithWhomThereIsADialog({
+      const dialogsInWhichTheUserIsAMember = await dialogService.getDialogsInWhichTheUserIsAMember({
         userId: user.id,
       });
       io.to(
-        usersWithWhomThereIsADialog.map(
-          (userWithWhomThereIsADialog) => `user-${userWithWhomThereIsADialog.id}`,
+        dialogsInWhichTheUserIsAMember.map(
+          (dialogInWhichTheUserIsAMember) => `user-${dialogInWhichTheUserIsAMember.userId}`,
         ),
       ).emit('SERVER:DIALOGS_NEED_TO_UPDATE');
+      io.to(
+        dialogsInWhichTheUserIsAMember.map(
+          (dialogInWhichTheUserIsAMember) => `chat-${dialogInWhichTheUserIsAMember.chatId}`,
+        ),
+      ).emit('SERVER:DIALOG_NEED_TO_UPDATE');
     } catch (e) {
       console.log('disconnect', e);
     }

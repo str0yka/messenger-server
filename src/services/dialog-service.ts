@@ -512,6 +512,65 @@ class DialogService {
       data: { isPinned: true, pinnedOrder: 1 },
     });
   }
+
+  async getDialogsInWhichTheUserIsAMember({
+    userId,
+  }: {
+    userId: number;
+  }): Promise<Omit<DialogDto, 'unreadedMessagesCount'>[]> {
+    const chatsData = await prisma.chat.findMany({
+      where: {
+        dialogs: {
+          some: {
+            partnerId: userId,
+          },
+        },
+      },
+      select: {
+        blocked: {
+          select: PRISMA_SELECT.USER,
+        },
+        dialogs: {
+          where: {
+            partnerId: userId,
+          },
+          include: {
+            user: {
+              select: PRISMA_SELECT.USER,
+            },
+            partner: {
+              select: PRISMA_SELECT.USER,
+            },
+            pinnedMessage: {
+              select: PRISMA_SELECT.MESSAGE,
+            },
+            messages: {
+              orderBy: {
+                createdAt: 'desc',
+              },
+              take: 1,
+              select: PRISMA_SELECT.MESSAGE,
+            },
+          },
+        },
+      },
+    });
+
+    return chatsData.map((chatData) => {
+      const { blocked, dialogs } = chatData;
+      const { messages, ...dialogData } = dialogs[0];
+
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      const { unreadedMessagesCount, ...dialogDto } = DialogDto({
+        blocked,
+        dialog: dialogData,
+        lastMessage: messages[0],
+        unreadedMessagesCount: 0,
+      });
+
+      return dialogDto;
+    });
+  }
 }
 
 export const dialogService = new DialogService();
