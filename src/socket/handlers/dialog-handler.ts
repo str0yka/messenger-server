@@ -132,7 +132,6 @@ export const dialogHandler = (io: IO.Server, socket: IO.Socket) => {
 
       if (deleteForEveryone) {
         await prisma.dialog.deleteMany({ where: { chatId: dialogData.chatId } });
-        await prisma.chat.delete({ where: { id: dialogData.chatId } });
         return io
           .to([`user-${dialogData.partnerId}`, `user-${dialogData.userId}`])
           .emit('SERVER:DIALOGS_NEED_TO_UPDATE');

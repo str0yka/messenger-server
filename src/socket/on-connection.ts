@@ -30,20 +30,24 @@ export const onConnection = async (io: IO.Server, socket: IO.Socket) => {
   messageHandler(io, socket);
   dialogHandler(io, socket);
 
-  await userService.update({ id: user.id, status: 'ONLINE' });
-  const dialogsInWhichTheUserIsAMember = await dialogService.getDialogsInWhichTheUserIsAMember({
-    userId: user.id,
-  });
-  io.to(
-    dialogsInWhichTheUserIsAMember.map(
-      (dialogInWhichTheUserIsAMember) => `user-${dialogInWhichTheUserIsAMember.userId}`,
-    ),
-  ).emit('SERVER:DIALOGS_NEED_TO_UPDATE');
-  io.to(
-    dialogsInWhichTheUserIsAMember.map(
-      (dialogInWhichTheUserIsAMember) => `chat-${dialogInWhichTheUserIsAMember.chatId}`,
-    ),
-  ).emit('SERVER:DIALOG_NEED_TO_UPDATE');
+  try {
+    await userService.update({ id: user.id, status: 'ONLINE' });
+    const dialogsInWhichTheUserIsAMember = await dialogService.getDialogsInWhichTheUserIsAMember({
+      userId: user.id,
+    });
+    io.to(
+      dialogsInWhichTheUserIsAMember.map(
+        (dialogInWhichTheUserIsAMember) => `user-${dialogInWhichTheUserIsAMember.userId}`,
+      ),
+    ).emit('SERVER:DIALOGS_NEED_TO_UPDATE');
+    io.to(
+      dialogsInWhichTheUserIsAMember.map(
+        (dialogInWhichTheUserIsAMember) => `chat-${dialogInWhichTheUserIsAMember.chatId}`,
+      ),
+    ).emit('SERVER:DIALOG_NEED_TO_UPDATE');
+  } catch (e) {
+    console.log('connect', e);
+  }
 
   socket.on('disconnect', async () => {
     try {

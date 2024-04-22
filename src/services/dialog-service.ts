@@ -194,9 +194,30 @@ class DialogService {
     }
 
     const chatData = await prisma.chat.findFirst({
-      where: { users: { some: { AND: [{ id: userData.id }, { id: partnerData.id }] } } },
-      include: { dialogs: true },
+      where: {
+        AND: [
+          {
+            users: {
+              some: {
+                id: userData.id,
+              },
+            },
+          },
+          {
+            users: {
+              some: {
+                id: partnerData.id,
+              },
+            },
+          },
+        ],
+      },
+      include: {
+        dialogs: true,
+      },
     });
+
+    console.log('@chatData', chatData);
 
     if (
       chatData &&
@@ -227,6 +248,11 @@ class DialogService {
         await prisma.chat.update({
           where: { id: chatData.id },
           data: {
+            users: {
+              connect: {
+                id: userData.id,
+              },
+            },
             dialogs: {
               create: {
                 title: 'Saved Messages',
@@ -245,6 +271,11 @@ class DialogService {
       await prisma.chat.update({
         where: { id: chatData.id },
         data: {
+          users: {
+            connect: {
+              id: userData.id,
+            },
+          },
           dialogs: {
             create: {
               title: partnerData.name,
